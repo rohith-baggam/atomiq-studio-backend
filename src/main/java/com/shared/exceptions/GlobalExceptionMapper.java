@@ -11,7 +11,6 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
   @Override
   public Response toResponse(Exception exception) {
 
-    System.out.println(exception);
     if (exception instanceof ConflictException) {
       return ApiResponse.error(null, exception.getMessage(), Response.Status.CONFLICT);
     }

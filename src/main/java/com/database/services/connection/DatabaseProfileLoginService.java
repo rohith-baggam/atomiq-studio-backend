@@ -3,9 +3,9 @@ package com.database.services.connection;
 import com.database.dto.request.connection.DatabaseProfileLoginRequest;
 import com.database.dto.response.connection.DatabaseLoginResponse;
 import com.database.utils.database.DatabaseConnectionUtility;
+import com.shared.exceptions.ValidationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.validation.ValidationException;
 
 @ApplicationScoped
 public class DatabaseProfileLoginService {

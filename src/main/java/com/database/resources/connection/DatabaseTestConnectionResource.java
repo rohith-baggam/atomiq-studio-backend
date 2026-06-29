@@ -5,6 +5,7 @@ import com.database.dto.response.connection.DatabaseTestConnectionResponse;
 import com.database.services.connection.DatabaseTestConnectionService;
 import com.shared.dto.ApiResponse;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -19,8 +20,8 @@ public class DatabaseTestConnectionResource {
   @Inject DatabaseTestConnectionService databaseTestConnectionService;
 
   @POST
-  @Path("test-database-api/")
-  public Response connectDatabase(DatabaseTestConnectionRequest request) {
+  @Path("test-database-connection-api/")
+  public Response connectDatabase(@Valid DatabaseTestConnectionRequest request) {
     // this is an api just to check database details and connection status without
     // saving to saving. This is api has no interaction with database
     DatabaseTestConnectionResponse databaseTestConnectionResponse =

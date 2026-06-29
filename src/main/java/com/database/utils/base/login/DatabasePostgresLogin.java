@@ -18,6 +18,6 @@ public class DatabasePostgresLogin extends DatabaseProfileLoginBase {
 
   @Override
   public boolean testConnectionRequest() {
-    return false;
+    return true;
   }
 }

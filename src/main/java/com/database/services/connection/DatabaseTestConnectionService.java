@@ -6,8 +6,8 @@ import com.database.utils.base.DatabaseProfileLoginBase;
 import com.database.utils.base.login.DatabaseMySqlLogin;
 import com.database.utils.base.login.DatabasePostgresLogin;
 import com.shared.enums.DataBaseType;
+import com.shared.exceptions.ValidationException;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.validation.ValidationException;
 
 @ApplicationScoped
 public class DatabaseTestConnectionService {
@@ -19,7 +19,7 @@ public class DatabaseTestConnectionService {
     if (request.dbType.toString().equals(DataBaseType.MYSQL.toString())) {
       return new DatabaseMySqlLogin(request);
     }
-    throw new ValidationException("Postgres and MSSQL are only available not this moment");
+    throw new ValidationException("Postgres and MySQL are only available not this moment");
   }
 
   public DatabaseTestConnectionResponse testConnect(DatabaseTestConnectionRequest request) {

@@ -1,10 +1,10 @@
 package com.database.dto.request.connection;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 // When database is already saved and test with id
 public class DatabaseProfileTestConnectionRequest {
-  @NotBlank(message = "profile id is required")
+  @NotNull(message = "userId is required field")
   public UUID userId;
 }

@@ -1,11 +1,11 @@
 package com.database.dto.request.connection;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 public class DatabaseProfileLoginRequest {
 
-  @NotBlank(message = "profile id is required")
+  @NotNull(message = "userId is required field")
   public UUID userId;
 
   public DatabaseProfileLoginRequest(UUID userId) {

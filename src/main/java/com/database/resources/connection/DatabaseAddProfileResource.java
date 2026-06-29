@@ -4,9 +4,8 @@ import com.database.dto.request.connection.DatabaseAddProfileRequest;
 import com.database.dto.response.connection.DatabaseLoginResponse;
 import com.database.services.connection.DatabaseAddProfileAndLoginService;
 import com.shared.dto.ApiResponse;
-import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.BeanParam;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -22,9 +21,8 @@ public class DatabaseAddProfileResource {
   @Inject DatabaseAddProfileAndLoginService databaseAddProfileAndLoginService;
 
   @POST
-  @Authenticated
   @Path("add-connection-api/")
-  public Response addConnectionApi(@BeanParam DatabaseAddProfileRequest request) {
+  public Response addConnectionApi(@Valid DatabaseAddProfileRequest request) {
     // this is an api for adding new database profile and test before connecting
     DatabaseLoginResponse databaseLoginResponse =
         databaseAddProfileAndLoginService.addDatabaseProfileAndLogin(request);

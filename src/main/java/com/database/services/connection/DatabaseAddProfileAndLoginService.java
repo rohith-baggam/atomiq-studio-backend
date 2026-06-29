@@ -10,10 +10,10 @@ import com.database.repository.DbUserEntityRepository;
 import com.database.utils.database.DatabaseProfileLoginBaseUtility;
 import com.shared.enums.DataBaseType;
 import com.shared.enums.DatabaseConnectionStatus;
+import com.shared.exceptions.ValidationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.validation.ValidationException;
 import java.time.LocalDateTime;
 
 @ApplicationScoped

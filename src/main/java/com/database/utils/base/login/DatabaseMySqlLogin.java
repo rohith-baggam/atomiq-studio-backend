@@ -12,11 +12,12 @@ public class DatabaseMySqlLogin extends DatabaseProfileLoginBase {
 
   @Override
   public String generateJwtToken(DbUserEntity dbUserEntity) {
+
     return JwtUtils.generateJwt(dbUserEntity);
   }
 
   @Override
   public boolean testConnectionRequest() {
-    return false;
+    return true;
   }
 }

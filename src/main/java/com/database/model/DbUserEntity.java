@@ -37,12 +37,13 @@ public class DbUserEntity extends BaseEntity {
   public String password;
 
   @Column(name = "environment")
-  public String environment = DatabaseEnvironment.DEV.toString();
+  @Enumerated(EnumType.STRING)
+  public DatabaseEnvironment environment = DatabaseEnvironment.DEV;
 
   @Column(name = "lastConnectedTime")
   public LocalDateTime lastConnectedTime;
 
-  @Enumerated(EnumType.STRING)
   @Column(name = "lastConnectionStatus")
+  @Enumerated(EnumType.STRING)
   public DatabaseConnectionStatus lastConnectionStatus;
 }

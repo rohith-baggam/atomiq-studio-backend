@@ -3,7 +3,6 @@ package com.database.resources.connection;
 import com.database.dto.request.connection.DatabaseProfileTestConnectionRequest;
 import com.database.services.connection.DatabaseProfileTestConnectionService;
 import com.shared.dto.ApiResponse;
-import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -21,7 +20,6 @@ public class DatabaseProfileTestConnectionResource {
   @Inject DatabaseProfileTestConnectionService databaseProfileTestConnectionService;
 
   @POST
-  @Authenticated
   @Path("profile-connection-status-api/")
   public Response profileConnectionStatusApi(@Valid DatabaseProfileTestConnectionRequest request) {
     // this is an api to get connection status of database user profile

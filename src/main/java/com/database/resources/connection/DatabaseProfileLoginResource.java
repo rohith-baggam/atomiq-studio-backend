@@ -3,8 +3,8 @@ package com.database.resources.connection;
 import com.database.dto.request.connection.DatabaseProfileLoginRequest;
 import com.database.services.connection.DatabaseProfileLoginService;
 import com.shared.dto.ApiResponse;
-import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -20,9 +20,8 @@ public class DatabaseProfileLoginResource {
   @Inject DatabaseProfileLoginService databaseProfileLoginService;
 
   @POST
-  @Authenticated
   @Path("profile-login-api/")
-  public Response profileLoginApi(DatabaseProfileLoginRequest request) {
+  public Response profileLoginApi(@Valid DatabaseProfileLoginRequest request) {
     // this is an api to get jwt token for test connection and login with database
     // user
     return ApiResponse.success(databaseProfileLoginService.login(request), "Ok");

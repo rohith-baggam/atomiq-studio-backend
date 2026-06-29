@@ -22,7 +22,7 @@ public class DatabaseEntity extends BaseEntity {
   @Column(name = "databaseName", length = 128, nullable = false)
   public String dbName;
 
-  @Enumerated(EnumType.STRING)
   @Column(name = "databaseType", length = 128, nullable = false)
+  @Enumerated(EnumType.STRING)
   public DataBaseType dbType;
 }

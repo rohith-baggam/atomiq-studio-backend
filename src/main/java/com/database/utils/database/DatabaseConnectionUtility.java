@@ -5,9 +5,9 @@ import com.database.model.DbUserEntity;
 import com.database.repository.DbUserEntityRepository;
 import com.database.services.connection.DatabaseTestConnectionService;
 import com.database.utils.base.DatabaseProfileLoginBase;
+import com.shared.exceptions.ValidationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.validation.ValidationException;
 import java.util.UUID;
 
 @ApplicationScoped

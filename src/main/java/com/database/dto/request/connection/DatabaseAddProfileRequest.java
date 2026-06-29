@@ -1,6 +1,10 @@
 package com.database.dto.request.connection;
 
 import com.shared.enums.DataBaseType;
+import com.shared.enums.DatabaseEnvironment;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -13,6 +17,7 @@ public class DatabaseAddProfileRequest {
   public String dbName;
 
   @NotNull(message = "db type is required field")
+  @Enumerated(EnumType.STRING)
   public DataBaseType dbType;
 
   @NotBlank(message = "profile name is required field")
@@ -27,17 +32,16 @@ public class DatabaseAddProfileRequest {
   @Size(max = 128)
   public String host;
 
-  @NotBlank(message = "port is required field")
-  @Size(max = 128)
+  @NotNull(message = "Port is required field")
+  @Min(value = 0)
   public Integer port;
 
   @NotBlank(message = "password is required field")
   @Size(max = 128)
   public String password;
 
-  @NotBlank(message = "environment is required field")
-  @Size(max = 128)
-  public String environment;
+  @NotNull(message = "environment is required field")
+  public DatabaseEnvironment environment;
 
   public DatabaseAddProfileRequest(
       String dbName,
@@ -47,7 +51,7 @@ public class DatabaseAddProfileRequest {
       String host,
       Integer port,
       String password,
-      String environment) {
+      DatabaseEnvironment environment) {
     this.dbName = dbName;
     this.profileName = profileName;
     this.dbType = dbType;

@@ -19,8 +19,8 @@ CREATE TABLE users (
     host VARCHAR(128) NOT NULL,
     port INTEGER NOT NULL,
     password VARCHAR(255) NOT NULL,
-    environment VARCHAR(255) DEFAULT 'DEV',
-    "lastConnectedTime" VARCHAR(255),
+    environment VARCHAR(255) DEFAULT 'DEV' CHECK (environment IN ('LOCAL','DEV','STAGE','PROD')),
+    "lastConnectedTime" TIMESTAMP,
     "lastConnectionStatus" VARCHAR(255) CHECK ("lastConnectionStatus" IN ('CONNECTED','HEALTHY','FAILED')),
     PRIMARY KEY (id),
     CONSTRAINT fk_users_database FOREIGN KEY ("databaseId") REFERENCES "database"(id)
