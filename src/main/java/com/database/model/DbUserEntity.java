@@ -11,6 +11,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -39,7 +40,7 @@ public class DbUserEntity extends BaseEntity {
   public String environment = DatabaseEnvironment.DEV.toString();
 
   @Column(name = "lastConnectedTime")
-  public String lastConnectedTime;
+  public LocalDateTime lastConnectedTime;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "lastConnectionStatus")
