@@ -2,6 +2,7 @@ package com.database.services.connection;
 
 import com.database.dto.request.connection.DatabaseProfileTestConnectionRequest;
 import com.database.dto.response.connection.DatabaseTestConnectionResponse;
+import com.database.model.DbUserEntity;
 import com.database.utils.database.DatabaseConnectionUtility;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -13,8 +14,8 @@ public class DatabaseProfileTestConnectionService {
 
   public DatabaseTestConnectionResponse connect(DatabaseProfileTestConnectionRequest request) {
 
-    boolean isConnected = databaseConnectionUtility.isConnected(request.userId);
-
+    DbUserEntity dbUserEntity = databaseConnectionUtility.getDbUserEntity(request.userId);
+    Boolean isConnected = databaseConnectionUtility.isDatabaseEntityConnected(dbUserEntity);
     return new DatabaseTestConnectionResponse(isConnected);
   }
 }

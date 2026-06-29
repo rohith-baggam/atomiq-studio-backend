@@ -19,5 +19,5 @@ public abstract class DatabaseProfileLoginBase {
 
   public abstract String generateJwtToken(DbUserEntity dbUserEntity);
 
-  public abstract boolean testConnectionRequest();
+  public abstract String buildJdbcUrl();
 }

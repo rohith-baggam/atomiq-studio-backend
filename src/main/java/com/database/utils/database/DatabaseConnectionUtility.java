@@ -8,6 +8,9 @@ import com.database.utils.base.DatabaseProfileLoginBase;
 import com.shared.exceptions.ValidationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -45,10 +48,57 @@ public class DatabaseConnectionUtility extends DatabaseProfileLoginBaseUtility {
             dbUserEntity.port,
             dbUserEntity.password);
 
-    DatabaseProfileLoginBase databaseTestConnectionBase =
-        databaseTestConnectionService.getDatabaseUtility(databaseTestConnectionRequest);
-    return databaseTestConnectionBase.testConnectionRequest();
+    return this.isDatabaseRequestConnected(databaseTestConnectionRequest);
   }
 
-  // next step to create a function to get jdbc driver based on database type
+  public String getDatabaseConnectionString(DbUserEntity dbUserEntity) {
+
+    DatabaseProfileLoginBase databaseTestConnectionBase = this.getDatabaseUtility(dbUserEntity);
+    return databaseTestConnectionBase.buildJdbcUrl();
+  }
+
+  public String getDatabaseConnectionStringWithRequest(DatabaseTestConnectionRequest request) {
+
+    String jdbcUrl = this.getDatabaseUtilityWithRequest(request).buildJdbcUrl();
+    return jdbcUrl;
+  }
+
+  public Connection getDatabaseConnectionWithTestConnectionRequest(
+      DatabaseTestConnectionRequest databaseTestConnectionRequest) throws SQLException {
+
+    String jdbcUrl = this.getDatabaseConnectionStringWithRequest(databaseTestConnectionRequest);
+    Connection connection =
+        DriverManager.getConnection(
+            jdbcUrl,
+            databaseTestConnectionRequest.username,
+            databaseTestConnectionRequest.password);
+    return connection;
+  }
+
+  public Connection getDatabaseConnection(DbUserEntity dbUserEntity) throws SQLException {
+
+    DatabaseTestConnectionRequest request = this.getDatabaseTestConnectionRequest(dbUserEntity);
+    return this.getDatabaseConnectionWithTestConnectionRequest(request);
+  }
+
+  public boolean isDatabaseEntityConnected(DbUserEntity dbUserEntity) {
+    try (Connection connection = this.getDatabaseConnection(dbUserEntity)) {
+      return connection.isValid(10);
+
+    } catch (SQLException e) {
+      return false;
+    }
+  }
+
+  public boolean isDatabaseRequestConnected(
+      DatabaseTestConnectionRequest databaseTestConnectionRequest) {
+    try (Connection connection =
+        this.getDatabaseConnectionWithTestConnectionRequest(databaseTestConnectionRequest)) {
+
+      return connection.isValid(10);
+
+    } catch (SQLException e) {
+      return false;
+    }
+  }
 }

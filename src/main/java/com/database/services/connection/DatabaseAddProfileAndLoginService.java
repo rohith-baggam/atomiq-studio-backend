@@ -68,6 +68,7 @@ public class DatabaseAddProfileAndLoginService extends DatabaseProfileLoginBaseU
     dbUserEntity.environment = request.environment;
     dbUserEntity.lastConnectedTime = LocalDateTime.now();
     dbUserEntity.lastConnectionStatus = DatabaseConnectionStatus.CONNECTED;
+    System.out.println(dbUserEntity.password);
     return dbUserEntity;
   }
 

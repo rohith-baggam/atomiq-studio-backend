@@ -4,6 +4,7 @@ import com.shared.dto.ApiResponse;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
+import java.sql.SQLException;
 
 @Provider
 public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
@@ -22,6 +23,10 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
     }
 
     if (exception instanceof ValidationException) {
+      return ApiResponse.error(null, exception.getMessage(), Response.Status.BAD_REQUEST);
+    }
+
+    if (exception instanceof SQLException) {
       return ApiResponse.error(null, exception.getMessage(), Response.Status.BAD_REQUEST);
     }
 

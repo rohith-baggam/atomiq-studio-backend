@@ -10,7 +10,14 @@ import com.shared.enums.DataBaseType;
 import com.shared.exceptions.ValidationException;
 
 public class DatabaseProfileLoginBaseUtility {
+
   public DatabaseProfileLoginBase getDatabaseUtility(DbUserEntity dbUserEntity) {
+    DatabaseTestConnectionRequest databaseTestConnectionRequest =
+        this.getDatabaseTestConnectionRequest(dbUserEntity);
+    return this.getDatabaseUtilityWithRequest(databaseTestConnectionRequest);
+  }
+
+  public DatabaseTestConnectionRequest getDatabaseTestConnectionRequest(DbUserEntity dbUserEntity) {
 
     DatabaseTestConnectionRequest databaseTestConnectionRequest =
         new DatabaseTestConnectionRequest(
@@ -20,14 +27,19 @@ public class DatabaseProfileLoginBaseUtility {
             dbUserEntity.host,
             dbUserEntity.port,
             dbUserEntity.password);
+    return databaseTestConnectionRequest;
+  }
 
-    if (dbUserEntity.databaseEntity.dbType.toString().equals(DataBaseType.POSTGRES.toString())) {
+  public DatabaseProfileLoginBase getDatabaseUtilityWithRequest(
+      DatabaseTestConnectionRequest databaseTestConnectionRequest) {
+
+    if (databaseTestConnectionRequest.dbType.toString().equals(DataBaseType.POSTGRES.toString())) {
       return new DatabasePostgresLogin(databaseTestConnectionRequest);
     }
-    if (dbUserEntity.databaseEntity.dbType.toString().equals(DataBaseType.MYSQL.toString())) {
+    if (databaseTestConnectionRequest.dbType.toString().equals(DataBaseType.MYSQL.toString())) {
       return new DatabaseMySqlLogin(databaseTestConnectionRequest);
     }
-    throw new ValidationException("Postgres and MSSQL are only available not this moment");
+    throw new ValidationException("Postgres and MySQL are only available not this moment");
   }
 
   public DatabaseLoginResponse login(DbUserEntity dbUserEntity) {
