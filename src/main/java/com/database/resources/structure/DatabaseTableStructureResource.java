@@ -1,6 +1,7 @@
 package com.database.resources.structure;
 
-import com.database.dto.request.info.DatabaseDbTableNameRequest;
+import com.database.dto.request.generic.DatabaseDbTableNameGenericRequest;
+import com.database.dto.request.info.DatabaseDbTableDataRequest;
 import com.database.services.structure.DatabaseTableStructureService;
 import com.shared.dto.ApiResponse;
 import com.shared.security.CurrentUser;
@@ -35,7 +36,7 @@ public class DatabaseTableStructureResource {
 
   @GET
   @Path("table-field-properties-api/")
-  public Response getDbTableDetailApi(@BeanParam DatabaseDbTableNameRequest request)
+  public Response getDbTableDetailApi(@BeanParam DatabaseDbTableNameGenericRequest request)
       throws SQLException {
 
     return ApiResponse.success(
@@ -46,7 +47,7 @@ public class DatabaseTableStructureResource {
 
   @GET
   @Path("table-data-api/")
-  public Response getDbTableDataApi(@BeanParam DatabaseDbTableNameRequest request)
+  public Response getDbTableDataApi(@BeanParam DatabaseDbTableDataRequest request)
       throws SQLException {
 
     return ApiResponse.success(
