@@ -3,7 +3,7 @@ package com.database.dto.request.info;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.QueryParam;
 
-public class DatabaseDbTableNameRequest {
+public class DatabaseDbTableDataRequest {
   @QueryParam("tableName")
   public String tableName;
 
