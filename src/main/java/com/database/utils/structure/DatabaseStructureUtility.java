@@ -1,5 +1,6 @@
 package com.database.utils.structure;
 
+import com.database.dto.request.info.DatabaseDbTableNameRequest;
 import com.database.dto.response.structure.DatabaseTableColumnMeta;
 import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableListResponse;
@@ -10,6 +11,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -125,39 +127,72 @@ public class DatabaseStructureUtility {
     return results;
   }
 
-  public DatabaseTableDataResponse getDbTabledata(Connection connection, String tableName)
-      throws SQLException {
+  public DatabaseTableDataResponse getDbTabledata(
+      Connection connection, DatabaseDbTableNameRequest request) throws SQLException {
 
-    if (!isTableNameExist(connection, tableName)) {
+    if (!isTableNameExist(connection, request.tableName)) {
       throw new ValidationException("Invalid tableName");
     }
 
+    String table = "\"" + request.tableName + "\"";
+
+    // 1. columns + ORDER BY whitelist
     List<DatabaseTableColumnMeta> columns = new ArrayList<>();
-    List<List<Object>> rows = new ArrayList<>();
-
-    String sql = "SELECT * FROM \"" + tableName + "\" LIMIT 100";
-
+    Set<String> columnNames = new HashSet<>();
     try (Statement st = connection.createStatement();
-        ResultSet rs = st.executeQuery(sql)) {
-
+        ResultSet rs = st.executeQuery("SELECT * FROM " + table + " LIMIT 0")) {
       ResultSetMetaData md = rs.getMetaData();
-      int colCount = md.getColumnCount();
-
-      for (int i = 1; i <= colCount; i++) {
-        columns.add(
-            new DatabaseTableColumnMeta(
-                md.getColumnName(i), md.getColumnTypeName(i))); // ← the data type
-      }
-
-      while (rs.next()) {
-        List<Object> row = new ArrayList<>(colCount);
-        for (int i = 1; i <= colCount; i++) {
-          row.add(rs.getObject(i));
-        }
-        rows.add(row);
+      for (int i = 1; i <= md.getColumnCount(); i++) {
+        columns.add(new DatabaseTableColumnMeta(md.getColumnName(i), md.getColumnTypeName(i)));
+        columnNames.add(md.getColumnName(i));
       }
     }
 
-    return new DatabaseTableDataResponse(columns, rows);
+    // 2. total row count
+    long count = 0;
+    try (Statement st = connection.createStatement();
+        ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + table)) {
+      rs.next();
+      count = rs.getLong(1);
+    }
+
+    // 3. sanitize limit/offset
+    int limit = (request.limit == null || request.limit <= 0) ? 10 : Math.min(request.limit, 1000);
+    int offset = (request.offset == null || request.offset < 0) ? 0 : request.offset;
+
+    // 4. sorting (whitelisted)
+    String orderBy = "";
+    if (request.sortBy != null && !request.sortBy.isBlank()) {
+      if (!columnNames.contains(request.sortBy)) {
+        throw new ValidationException("Invalid sort column: " + request.sortBy);
+      }
+      String dir = "DESC".equalsIgnoreCase(request.sortDir) ? "DESC" : "ASC";
+      orderBy = " ORDER BY \"" + request.sortBy + "\" " + dir;
+    }
+
+    // 5. paged query
+    String sql = "SELECT * FROM " + table + orderBy + " LIMIT ? OFFSET ?";
+
+    List<List<Object>> rows = new ArrayList<>();
+    try (PreparedStatement ps = connection.prepareStatement(sql)) {
+      ps.setInt(1, limit);
+      ps.setInt(2, offset);
+      try (ResultSet rs = ps.executeQuery()) {
+        int colCount = rs.getMetaData().getColumnCount();
+        while (rs.next()) {
+          List<Object> row = new ArrayList<>(colCount);
+          for (int i = 1; i <= colCount; i++) {
+            row.add(rs.getObject(i));
+          }
+          rows.add(row);
+        }
+      }
+    }
+
+    // 6. paging flags — derived from count (Django LimitOffsetPagination style)
+    boolean hasNext = offset + rows.size() < count; // more rows beyond this window
+    boolean hasPrev = offset > 0;
+
+    return new DatabaseTableDataResponse(columns, rows, hasNext, hasPrev, count);
   }
 }
