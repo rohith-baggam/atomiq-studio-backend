@@ -100,4 +100,67 @@ public class DatabaseTableDependencyUtility {
     }
     return new DatabaseErDiagramResponse(tables, relationships);
   }
+
+  public DatabaseErDiagramResponse getErDiagramOnTable(Connection connection, String tableName)
+      throws SQLException {
+    if (!databaseStructureUtility.isTableNameExist(connection, tableName))
+      throw new ValidationException("Invalid tableName");
+
+    DatabaseMetaData meta = connection.getMetaData();
+
+    Set<String> scope = new LinkedHashSet<>();
+    scope.add(tableName);
+    try (ResultSet rs = meta.getImportedKeys(null, null, tableName)) {
+      while (rs.next()) scope.add(rs.getString("PKTABLE_NAME"));
+    }
+    try (ResultSet rs = meta.getExportedKeys(null, null, tableName)) {
+      while (rs.next()) scope.add(rs.getString("FKTABLE_NAME"));
+    }
+
+    List<DatabaseErDiagramTableResponse> tables = new ArrayList<>();
+    for (String t : scope) tables.add(buildNode(meta, t));
+
+    List<DatabaseErDiagramRelationResponse> relationships = new ArrayList<>();
+    try (ResultSet rs = meta.getImportedKeys(null, null, tableName)) { // out
+      while (rs.next())
+        relationships.add(
+            new DatabaseErDiagramRelationResponse(
+                rs.getString("FKTABLE_NAME"), rs.getString("FKCOLUMN_NAME"),
+                rs.getString("PKTABLE_NAME"), rs.getString("PKCOLUMN_NAME")));
+    }
+    try (ResultSet rs = meta.getExportedKeys(null, null, tableName)) { // in
+      while (rs.next())
+        relationships.add(
+            new DatabaseErDiagramRelationResponse(
+                rs.getString("FKTABLE_NAME"), rs.getString("FKCOLUMN_NAME"),
+                rs.getString("PKTABLE_NAME"), rs.getString("PKCOLUMN_NAME")));
+    }
+
+    return new DatabaseErDiagramResponse(tables, relationships);
+  }
+
+  private DatabaseErDiagramTableResponse buildNode(DatabaseMetaData meta, String tableName)
+      throws SQLException {
+    // PK columns
+    Set<String> pkCols = new LinkedHashSet<>();
+    try (ResultSet rs = meta.getPrimaryKeys(null, null, tableName)) {
+      while (rs.next()) pkCols.add(rs.getString("COLUMN_NAME"));
+    }
+    // FK columns
+    Set<String> fkCols = new LinkedHashSet<>();
+    try (ResultSet rs = meta.getImportedKeys(null, null, tableName)) {
+      while (rs.next()) fkCols.add(rs.getString("FKCOLUMN_NAME"));
+    }
+    // columns -> node fields
+    List<DatabaseErDiagramTableFieldQuickResponse> fields = new ArrayList<>();
+    try (ResultSet rs = meta.getColumns(null, null, tableName, "%")) {
+      while (rs.next()) {
+        String col = rs.getString("COLUMN_NAME");
+        fields.add(
+            new DatabaseErDiagramTableFieldQuickResponse(
+                col, rs.getString("TYPE_NAME"), pkCols.contains(col), fkCols.contains(col)));
+      }
+    }
+    return new DatabaseErDiagramTableResponse(tableName, fields);
+  }
 }
