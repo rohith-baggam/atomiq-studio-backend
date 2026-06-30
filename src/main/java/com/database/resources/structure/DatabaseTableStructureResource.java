@@ -43,4 +43,14 @@ public class DatabaseTableStructureResource {
             currentUser.getUser(), request.tableName),
         null);
   }
+
+  @GET
+  @Path("table-data-api/")
+  public Response getDbTableDataApi(@BeanParam DatabaseDbTableNameRequest request)
+      throws SQLException {
+
+    return ApiResponse.success(
+        databaseTableStructureService.getDbTabledata(currentUser.getUser(), request.tableName),
+        null);
+  }
 }
