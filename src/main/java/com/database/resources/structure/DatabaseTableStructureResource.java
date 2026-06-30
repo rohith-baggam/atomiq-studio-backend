@@ -50,7 +50,6 @@ public class DatabaseTableStructureResource {
       throws SQLException {
 
     return ApiResponse.success(
-        databaseTableStructureService.getDbTabledata(currentUser.getUser(), request.tableName),
-        null);
+        databaseTableStructureService.getDbTabledata(currentUser.getUser(), request), null);
   }
 }
