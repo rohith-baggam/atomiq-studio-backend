@@ -1,0 +1,104 @@
+package com.database.utils.database;
+
+import com.database.dto.request.connection.DatabaseTestConnectionRequest;
+import com.database.model.DbUserEntity;
+import com.database.repository.DbUserEntityRepository;
+import com.database.services.connection.DatabaseTestConnectionService;
+import com.database.utils.base.DatabaseProfileLoginBase;
+import com.shared.exceptions.ValidationException;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.UUID;
+
+@ApplicationScoped
+public class DatabaseConnectionUtility extends DatabaseProfileLoginBaseUtility {
+
+  @Inject DbUserEntityRepository databaseUserEntityRepository;
+
+  @Inject DatabaseTestConnectionService databaseTestConnectionService;
+
+  public DbUserEntity getDbUserEntity(UUID dbUserEntityId) {
+    DbUserEntity dbUserEntity =
+        databaseUserEntityRepository
+            .findByDbUserId(dbUserEntityId)
+            .orElseThrow(() -> new ValidationException("Invalid Profile"));
+    return dbUserEntity;
+  }
+
+  public String getJwtToken(UUID dbUserEntityId) {
+
+    DbUserEntity dbUserEntity = this.getDbUserEntity(dbUserEntityId);
+
+    return this.login(dbUserEntity).jwtToken;
+  }
+
+  // get database connection health with dbUserEntity id
+  public boolean isConnected(UUID dbUserEntityId) {
+
+    DbUserEntity dbUserEntity = this.getDbUserEntity(dbUserEntityId);
+    DatabaseTestConnectionRequest databaseTestConnectionRequest =
+        new DatabaseTestConnectionRequest(
+            dbUserEntity.databaseEntity.dbName,
+            dbUserEntity.databaseEntity.dbType,
+            dbUserEntity.username,
+            dbUserEntity.host,
+            dbUserEntity.port,
+            dbUserEntity.password);
+
+    return this.isDatabaseRequestConnected(databaseTestConnectionRequest);
+  }
+
+  public String getDatabaseConnectionString(DbUserEntity dbUserEntity) {
+
+    DatabaseProfileLoginBase databaseTestConnectionBase = this.getDatabaseUtility(dbUserEntity);
+    return databaseTestConnectionBase.buildJdbcUrl();
+  }
+
+  public String getDatabaseConnectionStringWithRequest(DatabaseTestConnectionRequest request) {
+
+    String jdbcUrl = this.getDatabaseUtilityWithRequest(request).buildJdbcUrl();
+    return jdbcUrl;
+  }
+
+  public Connection getDatabaseConnectionWithTestConnectionRequest(
+      DatabaseTestConnectionRequest databaseTestConnectionRequest) throws SQLException {
+
+    String jdbcUrl = this.getDatabaseConnectionStringWithRequest(databaseTestConnectionRequest);
+    Connection connection =
+        DriverManager.getConnection(
+            jdbcUrl,
+            databaseTestConnectionRequest.username,
+            databaseTestConnectionRequest.password);
+    return connection;
+  }
+
+  public Connection getDatabaseConnection(DbUserEntity dbUserEntity) throws SQLException {
+
+    DatabaseTestConnectionRequest request = this.getDatabaseTestConnectionRequest(dbUserEntity);
+    return this.getDatabaseConnectionWithTestConnectionRequest(request);
+  }
+
+  public boolean isDatabaseEntityConnected(DbUserEntity dbUserEntity) {
+    try (Connection connection = this.getDatabaseConnection(dbUserEntity)) {
+      return connection.isValid(10);
+
+    } catch (SQLException e) {
+      return false;
+    }
+  }
+
+  public boolean isDatabaseRequestConnected(
+      DatabaseTestConnectionRequest databaseTestConnectionRequest) {
+    try (Connection connection =
+        this.getDatabaseConnectionWithTestConnectionRequest(databaseTestConnectionRequest)) {
+
+      return connection.isValid(10);
+
+    } catch (SQLException e) {
+      return false;
+    }
+  }
+}
