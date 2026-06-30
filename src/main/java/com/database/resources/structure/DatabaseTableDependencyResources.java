@@ -39,4 +39,12 @@ public class DatabaseTableDependencyResources {
     return ApiResponse.success(
         databaseTableDependencyService.getDbErDiagram(currentUser.getUser()), null);
   }
+
+  @GET
+  @Path("table-er-diagram-api/")
+  public Response getTableErDiagram(@BeanParam DatabaseDbTableNameGenericRequest request)
+      throws SQLException {
+    return ApiResponse.success(
+        databaseTableDependencyService.getTableErDiagram(request, currentUser.getUser()), null);
+  }
 }

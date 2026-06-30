@@ -30,4 +30,10 @@ public class DatabaseTableDependencyService {
 
     return databaseTableDependencyUtility.getDbErDiagram(connection);
   }
+
+  public DatabaseErDiagramResponse getTableErDiagram(
+      DatabaseDbTableNameGenericRequest request, DbUserEntity dbUserEntity) throws SQLException {
+    Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
+    return databaseTableDependencyUtility.getErDiagramOnTable(connection, request.tableName);
+  }
 }
