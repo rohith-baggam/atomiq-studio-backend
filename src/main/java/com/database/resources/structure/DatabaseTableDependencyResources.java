@@ -15,7 +15,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.sql.SQLException;
 
-@Path("database/api/dependency")
+@Path("database/api/dependency/")
 @Authenticated
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -26,10 +26,17 @@ public class DatabaseTableDependencyResources {
   @Inject CurrentUser currentUser;
 
   @GET
-  @Path("table-dependency-api")
+  @Path("table-dependency-api/")
   public Response getdependentApi(@BeanParam DatabaseDbTableNameGenericRequest request)
       throws SQLException {
     return ApiResponse.success(
         databaseTableDependencyService.getDependencyTables(request, currentUser.getUser()), null);
+  }
+
+  @GET
+  @Path("db-er-diagram-api/")
+  public Response getDbErDiagram() throws SQLException {
+    return ApiResponse.success(
+        databaseTableDependencyService.getDbErDiagram(currentUser.getUser()), null);
   }
 }

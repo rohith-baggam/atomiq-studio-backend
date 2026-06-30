@@ -3,6 +3,7 @@ package com.database.services.structure;
 import com.database.dto.request.generic.DatabaseDbTableNameGenericRequest;
 import com.database.dto.request.info.DatabaseDbTableDataRequest;
 import com.database.dto.request.info.table_properties.DatabaseTableDetailResponse;
+import com.database.dto.response.info.DatabaseTableFieldsHelperListResponse;
 import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableListResponse;
 import com.database.dto.response.structure.DatabaseTablePropertiesColumnResource;
@@ -51,5 +52,11 @@ public class DatabaseTableStructureService {
         connection,
         request.tableName,
         databaseTableDependencyUtility.getDependencyTablesOnTable(connection, request.tableName));
+  }
+
+  public List<DatabaseTableFieldsHelperListResponse> tableFieldHelperList(
+      DbUserEntity dbUserEntity, DatabaseDbTableNameGenericRequest request) throws SQLException {
+    Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
+    return databaseStructureUtility.tableFieldHelperList(connection, request.tableName);
   }
 }
