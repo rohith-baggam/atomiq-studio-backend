@@ -1,10 +1,12 @@
 package com.database.resources.structure;
 
+import com.database.dto.request.info.DatabaseDbTableNameRequest;
 import com.database.services.structure.DatabaseTableStructureService;
 import com.shared.dto.ApiResponse;
 import com.shared.security.CurrentUser;
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -29,5 +31,16 @@ public class DatabaseTableStructureResource {
 
     return ApiResponse.success(
         databaseTableStructureService.getDatabaseTableList(currentUser.getUser()), null);
+  }
+
+  @GET
+  @Path("table-field-properties-api/")
+  public Response getDbTableDetailApi(@BeanParam DatabaseDbTableNameRequest request)
+      throws SQLException {
+
+    return ApiResponse.success(
+        databaseTableStructureService.getDatabaseFieldProperties(
+            currentUser.getUser(), request.tableName),
+        null);
   }
 }
