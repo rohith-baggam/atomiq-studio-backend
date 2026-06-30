@@ -1,12 +1,15 @@
 package com.database.services.structure;
 
+import com.database.dto.request.generic.DatabaseDbTableNameGenericRequest;
 import com.database.dto.request.info.DatabaseDbTableDataRequest;
+import com.database.dto.request.info.table_properties.DatabaseTableDetailResponse;
 import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableListResponse;
 import com.database.dto.response.structure.DatabaseTablePropertiesColumnResource;
 import com.database.model.DbUserEntity;
 import com.database.utils.database.DatabaseConnectionUtility;
 import com.database.utils.structure.DatabaseStructureUtility;
+import com.database.utils.structure.DatabaseTableDependencyUtility;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.sql.Connection;
@@ -37,5 +40,16 @@ public class DatabaseTableStructureService {
 
     Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
     return databaseStructureUtility.getDbTabledata(connection, request);
+  }
+
+  @Inject DatabaseTableDependencyUtility databaseTableDependencyUtility;
+
+  public DatabaseTableDetailResponse getDbTableDetails(
+      DbUserEntity dbUserEntity, DatabaseDbTableNameGenericRequest request) throws SQLException {
+    Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
+    return databaseStructureUtility.getDbTableDetails(
+        connection,
+        request.tableName,
+        databaseTableDependencyUtility.getDependencyTablesOnTable(connection, request.tableName));
   }
 }

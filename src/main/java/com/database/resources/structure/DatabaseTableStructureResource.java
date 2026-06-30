@@ -53,4 +53,13 @@ public class DatabaseTableStructureResource {
     return ApiResponse.success(
         databaseTableStructureService.getDbTabledata(currentUser.getUser(), request), null);
   }
+
+  @GET
+  @Path("table-detail-api")
+  public Response getDbTableDetailsApi(@BeanParam DatabaseDbTableNameGenericRequest request)
+      throws SQLException {
+
+    return ApiResponse.success(
+        databaseTableStructureService.getDbTableDetails(currentUser.getUser(), request), null);
+  }
 }
