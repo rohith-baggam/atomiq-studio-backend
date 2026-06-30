@@ -5,6 +5,7 @@ import com.database.dto.response.info.DatabaseUserProfileResponse;
 import com.database.model.DbUserEntity;
 import com.database.repository.DbUserEntityRepository;
 import com.shared.exceptions.ValidationException;
+import com.shared.security.CurrentUser;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -44,5 +45,27 @@ public class DatabaseUserProfileService {
             .orElseThrow(() -> new ValidationException("Invalid Profile"));
     dbUserEntity.delete();
     return true;
+  }
+
+  @Inject CurrentUser currentUser;
+
+  public DatabaseUserProfileResponse entityDetails() {
+
+    DbUserEntity dbUserEntity = currentUser.getUser();
+    DatabaseUserProfileResponse databaseUserProfileResponse =
+        new DatabaseUserProfileResponse(
+            dbUserEntity.databaseEntity.id,
+            dbUserEntity.databaseEntity.dbName,
+            dbUserEntity.databaseEntity.dbType,
+            dbUserEntity.id,
+            dbUserEntity.profileName,
+            dbUserEntity.username,
+            dbUserEntity.host,
+            dbUserEntity.port,
+            dbUserEntity.password,
+            dbUserEntity.environment,
+            dbUserEntity.lastConnectedTime,
+            dbUserEntity.lastConnectionStatus);
+    return databaseUserProfileResponse;
   }
 }
