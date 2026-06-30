@@ -1,5 +1,6 @@
 package com.database.services.structure;
 
+import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableListResponse;
 import com.database.dto.response.structure.DatabaseTablePropertiesColumnResource;
 import com.database.model.DbUserEntity;
@@ -28,5 +29,12 @@ public class DatabaseTableStructureService {
       DbUserEntity dbUserEntity, String tableName) throws SQLException {
     Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
     return databaseStructureUtility.getDatabaseTableColumnPropertyDetails(connection, tableName);
+  }
+
+  public DatabaseTableDataResponse getDbTabledata(DbUserEntity dbUserEntity, String tableName)
+      throws SQLException {
+
+    Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
+    return databaseStructureUtility.getDbTabledata(connection, tableName);
   }
 }

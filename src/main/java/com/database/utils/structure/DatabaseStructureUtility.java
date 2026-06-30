@@ -1,5 +1,7 @@
 package com.database.utils.structure;
 
+import com.database.dto.response.structure.DatabaseTableColumnMeta;
+import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableListResponse;
 import com.database.dto.response.structure.DatabaseTablePropertiesColumnResource;
 import com.database.utils.database.DatabaseConnectionUtility;
@@ -9,6 +11,7 @@ import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -26,28 +29,34 @@ public class DatabaseStructureUtility {
     List<DatabaseTableListResponse> results = new ArrayList<>();
     DatabaseMetaData meta = connection.getMetaData();
 
+    List<String[]> tables = new ArrayList<>();
     try (ResultSet rs = meta.getTables(null, null, "%", new String[] {"TABLE"})) {
       while (rs.next()) {
-        String schema = rs.getString("TABLE_SCHEM");
-        String tableName = rs.getString("TABLE_NAME");
-
-        String qualified = "\"" + schema + "\".\"" + tableName + "\"";
-
-        long rowCount = 0;
-
-        try (Statement st = connection.createStatement();
-            ResultSet countRs = st.executeQuery("SELECT COUNT(*) FROM " + qualified)) {
-          countRs.next();
-          rowCount = countRs.getLong(1);
-        }
-        long columnCount = 0;
-        try (ResultSet colRs = meta.getColumns(null, schema, tableName, "%")) {
-          while (colRs.next()) columnCount++;
-        }
-        // we need to add no of columns
-        results.add(new DatabaseTableListResponse(tableName, rowCount, columnCount));
+        tables.add(new String[] {rs.getString("TABLE_SCHEM"), rs.getString("TABLE_NAME")});
       }
     }
+
+    for (String[] t : tables) {
+      String schema = t[0];
+      String tableName = t[1];
+      String qualified = "\"" + schema + "\".\"" + tableName + "\"";
+
+      long rowCount = 0;
+      try (Statement st = connection.createStatement();
+          ResultSet countRs = st.executeQuery("SELECT COUNT(*) FROM " + qualified)) {
+        countRs.next();
+        rowCount = countRs.getLong(1);
+      }
+
+      int columnCount = 0;
+      try (Statement st = connection.createStatement();
+          ResultSet colRs = st.executeQuery("SELECT * FROM " + qualified + " LIMIT 0")) {
+        columnCount = colRs.getMetaData().getColumnCount();
+      }
+
+      results.add(new DatabaseTableListResponse(tableName, rowCount, columnCount));
+    }
+
     return results;
   }
 
@@ -114,5 +123,41 @@ public class DatabaseStructureUtility {
     }
 
     return results;
+  }
+
+  public DatabaseTableDataResponse getDbTabledata(Connection connection, String tableName)
+      throws SQLException {
+
+    if (!isTableNameExist(connection, tableName)) {
+      throw new ValidationException("Invalid tableName");
+    }
+
+    List<DatabaseTableColumnMeta> columns = new ArrayList<>();
+    List<List<Object>> rows = new ArrayList<>();
+
+    String sql = "SELECT * FROM \"" + tableName + "\" LIMIT 100";
+
+    try (Statement st = connection.createStatement();
+        ResultSet rs = st.executeQuery(sql)) {
+
+      ResultSetMetaData md = rs.getMetaData();
+      int colCount = md.getColumnCount();
+
+      for (int i = 1; i <= colCount; i++) {
+        columns.add(
+            new DatabaseTableColumnMeta(
+                md.getColumnName(i), md.getColumnTypeName(i))); // ← the data type
+      }
+
+      while (rs.next()) {
+        List<Object> row = new ArrayList<>(colCount);
+        for (int i = 1; i <= colCount; i++) {
+          row.add(rs.getObject(i));
+        }
+        rows.add(row);
+      }
+    }
+
+    return new DatabaseTableDataResponse(columns, rows);
   }
 }

@@ -9,6 +9,6 @@ public class DatabaseTableListResponse {
   public DatabaseTableListResponse(String tableName, long rowCount, long columnCount) {
     this.tableName = tableName;
     this.rowCount = rowCount;
-    this.rowCount = columnCount;
+    this.columnCount = columnCount;
   }
 }
