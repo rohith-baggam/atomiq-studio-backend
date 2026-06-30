@@ -4,6 +4,7 @@ import com.database.dto.request.info.DatabaseDbTableDataRequest;
 import com.database.dto.request.info.table_properties.DatabaseTableDetailResponse;
 import com.database.dto.request.info.table_properties.DatabaseTableIndexResponse;
 import com.database.dto.request.info.table_properties.DatabaseTableInfoResponse;
+import com.database.dto.response.info.DatabaseTableFieldsHelperListResponse;
 import com.database.dto.response.structure.DatabaseTableColumnMeta;
 import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableDependentTableResponse;
@@ -125,6 +126,47 @@ public class DatabaseStructureUtility {
                 fkCols.contains(columnName),
                 indexedCols.contains(columnName),
                 uniqueCols.contains(columnName)));
+      }
+    }
+
+    return results;
+  }
+
+  public List<DatabaseTableFieldsHelperListResponse> tableFieldHelperList(
+      Connection connection, String tableName) throws SQLException {
+
+    if (!this.isTableNameExist(connection, tableName)) {
+      throw new ValidationException("Invalid tableName");
+    }
+    List<DatabaseTableFieldsHelperListResponse> results = new ArrayList<>();
+    DatabaseMetaData meta = connection.getMetaData();
+
+    Set<String> pkCols = new HashSet<>();
+    try (ResultSet rs = meta.getPrimaryKeys(null, null, tableName)) {
+      while (rs.next()) pkCols.add(rs.getString("COLUMN_NAME"));
+    }
+
+    Set<String> fkCols = new HashSet<>();
+    try (ResultSet rs = meta.getImportedKeys(null, null, tableName)) {
+      while (rs.next()) fkCols.add(rs.getString("FKCOLUMN_NAME"));
+    }
+
+    Set<String> indexedCols = new HashSet<>();
+    Set<String> uniqueCols = new HashSet<>();
+    try (ResultSet rs = meta.getIndexInfo(null, null, tableName, false, false)) {
+      while (rs.next()) {
+        String col = rs.getString("COLUMN_NAME");
+        if (col == null) continue;
+        indexedCols.add(col);
+        if (!rs.getBoolean("NON_UNIQUE")) uniqueCols.add(col);
+      }
+    }
+
+    try (ResultSet rs = meta.getColumns(null, null, tableName, "%")) {
+      while (rs.next()) {
+        String columnName = rs.getString("COLUMN_NAME");
+        results.add(
+            new DatabaseTableFieldsHelperListResponse(columnName, rs.getString("TYPE_NAME")));
       }
     }
 
