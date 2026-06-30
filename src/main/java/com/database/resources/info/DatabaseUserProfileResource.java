@@ -3,6 +3,7 @@ package com.database.resources.info;
 import com.database.dto.request.connection.DatabaseProfileTestConnectionRequest;
 import com.database.services.info.DatabaseUserProfileService;
 import com.shared.dto.ApiResponse;
+import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -23,6 +24,13 @@ public class DatabaseUserProfileResource {
   @Path("db-profile-list-api/")
   public Response getProfileListApi() {
     return ApiResponse.success(databaseUserProfileService.getDbUserEntityList(), "ok");
+  }
+
+  @GET
+  @Path("me/")
+  @Authenticated
+  public Response me() {
+    return ApiResponse.success(databaseUserProfileService.entityDetails(), null);
   }
 
   @DELETE
