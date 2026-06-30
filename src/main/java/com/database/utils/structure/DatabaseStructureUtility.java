@@ -1,6 +1,6 @@
 package com.database.utils.structure;
 
-import com.database.dto.request.info.DatabaseDbTableNameRequest;
+import com.database.dto.request.info.DatabaseDbTableDataRequest;
 import com.database.dto.response.structure.DatabaseTableColumnMeta;
 import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableListResponse;
@@ -128,7 +128,7 @@ public class DatabaseStructureUtility {
   }
 
   public DatabaseTableDataResponse getDbTabledata(
-      Connection connection, DatabaseDbTableNameRequest request) throws SQLException {
+      Connection connection, DatabaseDbTableDataRequest request) throws SQLException {
 
     if (!isTableNameExist(connection, request.tableName)) {
       throw new ValidationException("Invalid tableName");
