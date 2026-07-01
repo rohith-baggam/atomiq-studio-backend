@@ -1,14 +1,17 @@
 package com.database.services.structure;
 
 import com.database.dto.request.generic.DatabaseDbTableNameGenericRequest;
+import com.database.dto.request.info.DatabaseDbRunQueryRequest;
 import com.database.dto.request.info.DatabaseDbTableDataRequest;
 import com.database.dto.request.info.table_properties.DatabaseTableDetailResponse;
 import com.database.dto.response.info.DatabaseTableFieldsHelperListResponse;
 import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableListResponse;
 import com.database.dto.response.structure.DatabaseTablePropertiesColumnResource;
+import com.database.dto.response.structure.run_query.DatabaseQueryResultResponse;
 import com.database.model.DbUserEntity;
 import com.database.utils.database.DatabaseConnectionUtility;
+import com.database.utils.structure.DatabaseQueryExecutionUtility;
 import com.database.utils.structure.DatabaseStructureUtility;
 import com.database.utils.structure.DatabaseTableDependencyUtility;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -58,5 +61,15 @@ public class DatabaseTableStructureService {
       DbUserEntity dbUserEntity, DatabaseDbTableNameGenericRequest request) throws SQLException {
     Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
     return databaseStructureUtility.tableFieldHelperList(connection, request.tableName);
+  }
+
+  @Inject DatabaseQueryExecutionUtility databaseQueryExecutionUtility;
+
+  public List<DatabaseQueryResultResponse> runQuery(
+      DbUserEntity dbUserEntity, DatabaseDbRunQueryRequest request) throws SQLException {
+
+    try (Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity)) {
+      return databaseQueryExecutionUtility.runQuery(connection, request);
+    }
   }
 }
