@@ -1,15 +1,18 @@
 package com.database.resources.structure;
 
 import com.database.dto.request.generic.DatabaseDbTableNameGenericRequest;
+import com.database.dto.request.info.DatabaseDbRunQueryRequest;
 import com.database.dto.request.info.DatabaseDbTableDataRequest;
 import com.database.services.structure.DatabaseTableStructureService;
 import com.shared.dto.ApiResponse;
 import com.shared.security.CurrentUser;
 import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.BeanParam;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
@@ -61,5 +64,13 @@ public class DatabaseTableStructureResource {
 
     return ApiResponse.success(
         databaseTableStructureService.getDbTableDetails(currentUser.getUser(), request), null);
+  }
+
+  @POST
+  @Path("run-query/")
+  public Response getRunQueryResponse(@Valid DatabaseDbRunQueryRequest request)
+      throws SQLException {
+    return ApiResponse.success(
+        databaseTableStructureService.runQuery(currentUser.getUser(), request), null);
   }
 }
