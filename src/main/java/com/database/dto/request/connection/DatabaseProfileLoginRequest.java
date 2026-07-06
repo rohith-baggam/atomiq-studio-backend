@@ -8,6 +8,8 @@ public class DatabaseProfileLoginRequest {
   @NotNull(message = "userId is required field")
   public UUID userId;
 
+  public DatabaseProfileLoginRequest() {}
+
   public DatabaseProfileLoginRequest(UUID userId) {
     this.userId = userId;
   }

@@ -78,6 +78,10 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-csrf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit</artifactId>
             <scope>test</scope>
         </dependency>
@@ -139,8 +143,8 @@
                 <version>2.43.0</version>
                 <configuration>
                     <java>
-                        <googleJavaFormat/>
-                        <removeUnusedImports/>
+                        <googleJavaFormat />
+                        <removeUnusedImports />
                     </java>
                 </configuration>
             </plugin>
