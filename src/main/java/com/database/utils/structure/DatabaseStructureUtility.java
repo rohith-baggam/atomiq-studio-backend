@@ -5,6 +5,7 @@ import com.database.dto.request.info.table_properties.DatabaseTableDetailRespons
 import com.database.dto.request.info.table_properties.DatabaseTableIndexResponse;
 import com.database.dto.request.info.table_properties.DatabaseTableInfoResponse;
 import com.database.dto.response.info.DatabaseTableFieldsHelperListResponse;
+import com.database.dto.response.structure.DatabaseSchemaTableListResponse;
 import com.database.dto.response.structure.DatabaseTableColumnMeta;
 import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableDependentTableResponse;
@@ -33,39 +34,65 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class DatabaseStructureUtility {
 
-  @Inject DatabaseConnectionUtility databaseConnectionUtility;
+  @Inject
+  DatabaseConnectionUtility databaseConnectionUtility;
 
-  public List<DatabaseTableListResponse> getDatabaseTableList(Connection connection)
+  public List<DatabaseSchemaTableListResponse> getDatabaseTableList(Connection connection)
       throws SQLException {
-    List<DatabaseTableListResponse> results = new ArrayList<>();
+
+    List<DatabaseSchemaTableListResponse> results = new ArrayList<>();
     DatabaseMetaData meta = connection.getMetaData();
 
-    List<String[]> tables = new ArrayList<>();
-    try (ResultSet rs = meta.getTables(null, null, "%", new String[] {"TABLE"})) {
-      while (rs.next()) {
-        tables.add(new String[] {rs.getString("TABLE_SCHEM"), rs.getString("TABLE_NAME")});
+    try (ResultSet schemaRs = meta.getSchemas()) {
+
+      while (schemaRs.next()) {
+
+        String schemaName = schemaRs.getString("TABLE_SCHEM");
+
+        if ("information_schema".equalsIgnoreCase(schemaName)
+            || schemaName.startsWith("pg_")) {
+          continue;
+        }
+
+        List<DatabaseTableListResponse> tables = new ArrayList<>();
+
+        try (ResultSet tableRs = meta.getTables(null, schemaName, "%", new String[] { "TABLE" })) {
+
+          while (tableRs.next()) {
+
+            String tableName = tableRs.getString("TABLE_NAME");
+            String qualifiedTable = "\"" + schemaName + "\".\"" + tableName + "\"";
+
+            long rowCount = 0;
+            try (Statement st = connection.createStatement();
+                ResultSet countRs = st.executeQuery("SELECT COUNT(*) FROM " + qualifiedTable)) {
+
+              if (countRs.next()) {
+                rowCount = countRs.getLong(1);
+              }
+            }
+
+            int columnCount = 0;
+            try (ResultSet columnRs = meta.getColumns(null, schemaName, tableName, "%")) {
+
+              while (columnRs.next()) {
+                columnCount++;
+              }
+            }
+
+            tables.add(
+                new DatabaseTableListResponse(
+                    tableName,
+                    rowCount,
+                    columnCount));
+          }
+        }
+
+        results.add(
+            new DatabaseSchemaTableListResponse(
+                schemaName,
+                tables));
       }
-    }
-
-    for (String[] t : tables) {
-      String schema = t[0];
-      String tableName = t[1];
-      String qualified = "\"" + schema + "\".\"" + tableName + "\"";
-
-      long rowCount = 0;
-      try (Statement st = connection.createStatement();
-          ResultSet countRs = st.executeQuery("SELECT COUNT(*) FROM " + qualified)) {
-        countRs.next();
-        rowCount = countRs.getLong(1);
-      }
-
-      int columnCount = 0;
-      try (Statement st = connection.createStatement();
-          ResultSet colRs = st.executeQuery("SELECT * FROM " + qualified + " LIMIT 0")) {
-        columnCount = colRs.getMetaData().getColumnCount();
-      }
-
-      results.add(new DatabaseTableListResponse(tableName, rowCount, columnCount));
     }
 
     return results;
@@ -73,7 +100,7 @@ public class DatabaseStructureUtility {
 
   public boolean isTableNameExist(Connection connection, String tableName) throws SQLException {
     DatabaseMetaData meta = connection.getMetaData();
-    try (ResultSet rs = meta.getTables(null, null, tableName, new String[] {"TABLE"})) {
+    try (ResultSet rs = meta.getTables(null, null, tableName, new String[] { "TABLE" })) {
       return rs.next();
     }
   }
@@ -89,12 +116,14 @@ public class DatabaseStructureUtility {
 
     Set<String> pkCols = new HashSet<>();
     try (ResultSet rs = meta.getPrimaryKeys(null, null, tableName)) {
-      while (rs.next()) pkCols.add(rs.getString("COLUMN_NAME"));
+      while (rs.next())
+        pkCols.add(rs.getString("COLUMN_NAME"));
     }
 
     Set<String> fkCols = new HashSet<>();
     try (ResultSet rs = meta.getImportedKeys(null, null, tableName)) {
-      while (rs.next()) fkCols.add(rs.getString("FKCOLUMN_NAME"));
+      while (rs.next())
+        fkCols.add(rs.getString("FKCOLUMN_NAME"));
     }
 
     Set<String> indexedCols = new HashSet<>();
@@ -102,9 +131,11 @@ public class DatabaseStructureUtility {
     try (ResultSet rs = meta.getIndexInfo(null, null, tableName, false, false)) {
       while (rs.next()) {
         String col = rs.getString("COLUMN_NAME");
-        if (col == null) continue;
+        if (col == null)
+          continue;
         indexedCols.add(col);
-        if (!rs.getBoolean("NON_UNIQUE")) uniqueCols.add(col);
+        if (!rs.getBoolean("NON_UNIQUE"))
+          uniqueCols.add(col);
       }
     }
 
@@ -143,12 +174,14 @@ public class DatabaseStructureUtility {
 
     Set<String> pkCols = new HashSet<>();
     try (ResultSet rs = meta.getPrimaryKeys(null, null, tableName)) {
-      while (rs.next()) pkCols.add(rs.getString("COLUMN_NAME"));
+      while (rs.next())
+        pkCols.add(rs.getString("COLUMN_NAME"));
     }
 
     Set<String> fkCols = new HashSet<>();
     try (ResultSet rs = meta.getImportedKeys(null, null, tableName)) {
-      while (rs.next()) fkCols.add(rs.getString("FKCOLUMN_NAME"));
+      while (rs.next())
+        fkCols.add(rs.getString("FKCOLUMN_NAME"));
     }
 
     Set<String> indexedCols = new HashSet<>();
@@ -156,9 +189,11 @@ public class DatabaseStructureUtility {
     try (ResultSet rs = meta.getIndexInfo(null, null, tableName, false, false)) {
       while (rs.next()) {
         String col = rs.getString("COLUMN_NAME");
-        if (col == null) continue;
+        if (col == null)
+          continue;
         indexedCols.add(col);
-        if (!rs.getBoolean("NON_UNIQUE")) uniqueCols.add(col);
+        if (!rs.getBoolean("NON_UNIQUE"))
+          uniqueCols.add(col);
       }
     }
 
@@ -256,9 +291,8 @@ public class DatabaseStructureUtility {
           continue;
         }
         boolean unique = !rs.getBoolean("NON_UNIQUE");
-        DatabaseTableIndexResponse idx =
-            indexMap.computeIfAbsent(
-                indexName, n -> new DatabaseTableIndexResponse(n, new ArrayList<>(), unique, null));
+        DatabaseTableIndexResponse idx = indexMap.computeIfAbsent(
+            indexName, n -> new DatabaseTableIndexResponse(n, new ArrayList<>(), unique, null));
         idx.columns.add(col);
       }
     }
@@ -268,7 +302,7 @@ public class DatabaseStructureUtility {
     String schema = null;
     String tableType = null;
     String comment = null;
-    try (ResultSet rs = meta.getTables(null, null, tableName, new String[] {"TABLE"})) {
+    try (ResultSet rs = meta.getTables(null, null, tableName, new String[] { "TABLE" })) {
       if (rs.next()) {
         schema = rs.getString("TABLE_SCHEM");
         tableType = rs.getString("TABLE_TYPE");
@@ -277,8 +311,7 @@ public class DatabaseStructureUtility {
     }
 
     // row count + column count
-    String qualified =
-        (schema != null) ? "\"" + schema + "\".\"" + tableName + "\"" : "\"" + tableName + "\"";
+    String qualified = (schema != null) ? "\"" + schema + "\".\"" + tableName + "\"" : "\"" + tableName + "\"";
     long rowCount = 0;
     try (Statement st = connection.createStatement();
         ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + qualified)) {
@@ -292,9 +325,8 @@ public class DatabaseStructureUtility {
       columnCount = rs.getMetaData().getColumnCount();
     }
 
-    DatabaseTableInfoResponse info =
-        new DatabaseTableInfoResponse(
-            tableName, schema, tableType, comment, rowCount, columnCount, indexes.size());
+    DatabaseTableInfoResponse info = new DatabaseTableInfoResponse(
+        tableName, schema, tableType, comment, rowCount, columnCount, indexes.size());
 
     String createTableDdl = this.getCreateTableDdl(connection, tableName);
 
@@ -305,13 +337,12 @@ public class DatabaseStructureUtility {
     DatabaseMetaData meta = connection.getMetaData();
 
     String schema = null;
-    try (ResultSet rs = meta.getTables(null, null, tableName, new String[] {"TABLE"})) {
+    try (ResultSet rs = meta.getTables(null, null, tableName, new String[] { "TABLE" })) {
       if (rs.next()) {
         schema = rs.getString("TABLE_SCHEM");
       }
     }
-    String qualified =
-        (schema != null) ? "\"" + schema + "\".\"" + tableName + "\"" : "\"" + tableName + "\"";
+    String qualified = (schema != null) ? "\"" + schema + "\".\"" + tableName + "\"" : "\"" + tableName + "\"";
 
     List<String> defs = new ArrayList<>();
     try (ResultSet rs = meta.getColumns(null, null, tableName, "%")) {
@@ -344,8 +375,7 @@ public class DatabaseStructureUtility {
       }
     }
     if (!pkBySeq.isEmpty()) {
-      String cols =
-          pkBySeq.values().stream().map(c -> "\"" + c + "\"").collect(Collectors.joining(", "));
+      String cols = pkBySeq.values().stream().map(c -> "\"" + c + "\"").collect(Collectors.joining(", "));
       defs.add("  CONSTRAINT \"" + pkName + "\" PRIMARY KEY (" + cols + ")");
     }
 
