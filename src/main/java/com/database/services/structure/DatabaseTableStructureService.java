@@ -5,6 +5,7 @@ import com.database.dto.request.info.DatabaseDbRunQueryRequest;
 import com.database.dto.request.info.DatabaseDbTableDataRequest;
 import com.database.dto.request.info.table_properties.DatabaseTableDetailResponse;
 import com.database.dto.response.info.DatabaseTableFieldsHelperListResponse;
+import com.database.dto.response.structure.DatabaseSchemaTableListResponse;
 import com.database.dto.response.structure.DatabaseTableDataResponse;
 import com.database.dto.response.structure.DatabaseTableListResponse;
 import com.database.dto.response.structure.DatabaseTablePropertiesColumnResource;
@@ -23,11 +24,13 @@ import java.util.List;
 @ApplicationScoped
 public class DatabaseTableStructureService {
 
-  @Inject DatabaseConnectionUtility databaseConnectionUtility;
+  @Inject
+  DatabaseConnectionUtility databaseConnectionUtility;
 
-  @Inject DatabaseStructureUtility databaseStructureUtility;
+  @Inject
+  DatabaseStructureUtility databaseStructureUtility;
 
-  public List<DatabaseTableListResponse> getDatabaseTableList(DbUserEntity dbUserEntity)
+  public List<DatabaseSchemaTableListResponse> getDatabaseTableList(DbUserEntity dbUserEntity)
       throws SQLException {
     Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
     return databaseStructureUtility.getDatabaseTableList(connection);
@@ -46,7 +49,8 @@ public class DatabaseTableStructureService {
     return databaseStructureUtility.getDbTabledata(connection, request);
   }
 
-  @Inject DatabaseTableDependencyUtility databaseTableDependencyUtility;
+  @Inject
+  DatabaseTableDependencyUtility databaseTableDependencyUtility;
 
   public DatabaseTableDetailResponse getDbTableDetails(
       DbUserEntity dbUserEntity, DatabaseDbTableNameGenericRequest request) throws SQLException {
@@ -63,7 +67,8 @@ public class DatabaseTableStructureService {
     return databaseStructureUtility.tableFieldHelperList(connection, request.tableName);
   }
 
-  @Inject DatabaseQueryExecutionUtility databaseQueryExecutionUtility;
+  @Inject
+  DatabaseQueryExecutionUtility databaseQueryExecutionUtility;
 
   public List<DatabaseQueryResultResponse> runQuery(
       DbUserEntity dbUserEntity, DatabaseDbRunQueryRequest request) throws SQLException {
