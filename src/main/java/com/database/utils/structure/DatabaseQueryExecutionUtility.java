@@ -29,22 +29,40 @@ public class DatabaseQueryExecutionUtility {
         clamp(request.timeoutSeconds, DEFAULT_TIMEOUT_SECONDS, HARD_MAX_TIMEOUT_SECONDS);
 
     long start = System.nanoTime();
+    List<DatabaseQueryResultResponse> results = new ArrayList<>();
 
     try (Statement st = connection.createStatement()) {
 
       st.setMaxRows(cap + 1);
       st.setQueryTimeout(timeoutSeconds);
-      boolean isResultSet = st.execute(request.query);
 
-      DatabaseQueryResultResponse result = isResultSet ? readRows(st, cap) : readUpdate(st);
-      result.durationMs = elapsedMs(start);
-      return List.of(result);
+      // A single request may contain multiple statements (e.g. "SELECT …; UPDATE …;").
+      // Walk every result the driver produces — ResultSets AND update counts —
+      // via the standard getMoreResults()/getUpdateCount() loop, returning one
+      // response per statement.
+      boolean isResultSet = st.execute(request.query);
+      while (true) {
+        DatabaseQueryResultResponse result;
+        if (isResultSet) {
+          result = readRows(st, cap);
+        } else {
+          int updateCount = st.getUpdateCount();
+          if (updateCount == -1) break; // no ResultSet and no update count => done
+          result = readUpdate(updateCount);
+        }
+        result.durationMs = elapsedMs(start);
+        results.add(result);
+        isResultSet = st.getMoreResults();
+      }
+      return results;
     } catch (SQLException e) {
 
+      // Keep any results produced before the failing statement, then append the error.
       DatabaseQueryResultResponse err =
           DatabaseQueryResultResponse.ofError(e.getMessage(), e.getSQLState(), e.getErrorCode());
       err.durationMs = elapsedMs(start);
-      return List.of(err);
+      results.add(err);
+      return results;
     }
   }
 
@@ -76,8 +94,7 @@ public class DatabaseQueryExecutionUtility {
     }
   }
 
-  private DatabaseQueryResultResponse readUpdate(Statement st) throws SQLException {
-    int affected = st.getUpdateCount();
+  private DatabaseQueryResultResponse readUpdate(int affected) {
     return DatabaseQueryResultResponse.ofUpdate(affected, "Statement executed successfully");
   }
 

@@ -73,6 +73,9 @@ public class DatabaseTableStructureService {
   public List<DatabaseQueryResultResponse> runQuery(
       DbUserEntity dbUserEntity, DatabaseDbRunQueryRequest request) throws SQLException {
 
+    // NOTE: read-only / read-write permission is enforced in the FRONTEND
+    // (features/query — write statements are blocked before they are sent).
+    // The backend deliberately does not gate by profile.readOnly here.
     try (Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity)) {
       return databaseQueryExecutionUtility.runQuery(connection, request);
     }

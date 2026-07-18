@@ -40,6 +40,9 @@ public class DbUserEntity extends BaseEntity {
   @Enumerated(EnumType.STRING)
   public DatabaseEnvironment environment = DatabaseEnvironment.DEV;
 
+  @Column(name = "readOnly", nullable = false)
+  public Boolean readOnly = false;
+
   @Column(name = "lastConnectedTime")
   public LocalDateTime lastConnectedTime;
 
