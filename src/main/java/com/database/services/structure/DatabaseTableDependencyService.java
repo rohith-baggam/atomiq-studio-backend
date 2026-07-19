@@ -20,20 +20,22 @@ public class DatabaseTableDependencyService {
 
   public DatabaseTableDependentTableResponse getDependencyTables(
       DatabaseDbTableNameGenericRequest request, DbUserEntity dbUserEntity) throws SQLException {
-    Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
-
-    return databaseTableDependencyUtility.getDependencyTablesOnTable(connection, request.tableName);
+    try (Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity)) {
+      return databaseTableDependencyUtility.getDependencyTablesOnTable(
+          connection, request.tableName);
+    }
   }
 
   public DatabaseErDiagramResponse getDbErDiagram(DbUserEntity dbUserEntity) throws SQLException {
-    Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
-
-    return databaseTableDependencyUtility.getDbErDiagram(connection);
+    try (Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity)) {
+      return databaseTableDependencyUtility.getDbErDiagram(connection);
+    }
   }
 
   public DatabaseErDiagramResponse getTableErDiagram(
       DatabaseDbTableNameGenericRequest request, DbUserEntity dbUserEntity) throws SQLException {
-    Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity);
-    return databaseTableDependencyUtility.getErDiagramOnTable(connection, request.tableName);
+    try (Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity)) {
+      return databaseTableDependencyUtility.getErDiagramOnTable(connection, request.tableName);
+    }
   }
 }
