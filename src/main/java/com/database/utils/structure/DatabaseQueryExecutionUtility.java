@@ -12,21 +12,28 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 public class DatabaseQueryExecutionUtility {
 
   private static final int DEFAULT_MAX_ROWS = 200;
   private static final int HARD_MAX_ROWS = 1000;
-  private static final int DEFAULT_TIMEOUT_SECONDS = 30;
-  private static final int HARD_MAX_TIMEOUT_SECONDS = 300;
+
+  // Per-statement query timeout, seconds. Config-driven so large joins / schema
+  // pulls can run without a recompile — see application.properties.
+  @ConfigProperty(name = "atomiq.query.timeout.default-seconds", defaultValue = "120")
+  int defaultTimeoutSeconds;
+
+  @ConfigProperty(name = "atomiq.query.timeout.max-seconds", defaultValue = "1800")
+  int hardMaxTimeoutSeconds;
 
   public List<DatabaseQueryResultResponse> runQuery(
       Connection connection, DatabaseDbRunQueryRequest request) {
 
     int cap = clamp(request.maxRows, DEFAULT_MAX_ROWS, HARD_MAX_ROWS);
     int timeoutSeconds =
-        clamp(request.timeoutSeconds, DEFAULT_TIMEOUT_SECONDS, HARD_MAX_TIMEOUT_SECONDS);
+        clamp(request.timeoutSeconds, defaultTimeoutSeconds, hardMaxTimeoutSeconds);
 
     long start = System.nanoTime();
     List<DatabaseQueryResultResponse> results = new ArrayList<>();

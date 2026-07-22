@@ -21,7 +21,7 @@ public class DatabaseUserProfileService {
   @Inject CurrentUser currentUser;
 
   public List<DatabaseUserProfileResponse> getDbUserEntityList() {
-    return dbUserEntityRepository.listAll(Sort.ascending("lastConnectedTime")).stream()
+    return dbUserEntityRepository.listAll(Sort.descending("lastConnectedTime")).stream()
         .map(this::toResponse)
         .toList();
   }

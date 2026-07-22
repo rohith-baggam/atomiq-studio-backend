@@ -66,9 +66,8 @@ public class DatabaseAddProfileAndLoginService extends DatabaseProfileLoginBaseU
     dbUserEntity.port = request.port;
     dbUserEntity.password = request.password;
     dbUserEntity.environment = request.environment;
-    dbUserEntity.lastConnectedTime = LocalDateTime.now();
-    dbUserEntity.lastConnectionStatus = DatabaseConnectionStatus.CONNECTED;
-    System.out.println(dbUserEntity.password);
+    // lastConnectedTime / lastConnectionStatus are set only after the connection is
+    // validated (see addDatabaseProfileAndLogin), not blindly at creation time.
     return dbUserEntity;
   }
 
@@ -80,8 +79,17 @@ public class DatabaseAddProfileAndLoginService extends DatabaseProfileLoginBaseU
     DbUserEntity dbUserEntity = this.createDbUserEntity(request);
 
     dbUserEntityRepository.persist(dbUserEntity);
+
+    // Validate the connection — throws ValidationException (rolling back this
+    // transaction, so the profile is not saved) if the DB is unreachable.
     DatabaseLoginResponse databaseLoginResponse =
         databaseProfileLoginService.login(new DatabaseProfileLoginRequest(dbUserEntity.id));
+
+    // On success only: record the successful connection. dbUserEntity is a managed
+    // entity, so these updates are flushed when the transaction commits.
+    dbUserEntity.lastConnectedTime = LocalDateTime.now();
+    dbUserEntity.lastConnectionStatus = DatabaseConnectionStatus.CONNECTED;
+
     return databaseLoginResponse;
   }
 }
