@@ -178,7 +178,11 @@ public class DatabaseStructureUtility {
 
     Set<String> indexedCols = new HashSet<>();
     Set<String> uniqueCols = new HashSet<>();
-    try (ResultSet rs = meta.getIndexInfo(null, null, tableName, false, false)) {
+    // approximate=true: read existing dictionary stats instead of forcing a fresh
+    // ANALYZE. On Oracle, approximate=false makes the driver run DBMS_STATS, which
+    // throws ORA-20000 ("insufficient privileges") on tables the user can't analyze;
+    // other dialects ignore this flag, so true is safe everywhere and cheaper.
+    try (ResultSet rs = meta.getIndexInfo(null, null, tableName, false, true)) {
       while (rs.next()) {
         String col = rs.getString("COLUMN_NAME");
         if (col == null) continue;
@@ -246,7 +250,11 @@ public class DatabaseStructureUtility {
 
     Set<String> indexedCols = new HashSet<>();
     Set<String> uniqueCols = new HashSet<>();
-    try (ResultSet rs = meta.getIndexInfo(null, null, tableName, false, false)) {
+    // approximate=true: read existing dictionary stats instead of forcing a fresh
+    // ANALYZE. On Oracle, approximate=false makes the driver run DBMS_STATS, which
+    // throws ORA-20000 ("insufficient privileges") on tables the user can't analyze;
+    // other dialects ignore this flag, so true is safe everywhere and cheaper.
+    try (ResultSet rs = meta.getIndexInfo(null, null, tableName, false, true)) {
       while (rs.next()) {
         String col = rs.getString("COLUMN_NAME");
         if (col == null) continue;
@@ -436,7 +444,11 @@ public class DatabaseStructureUtility {
 
     // indexes — group getIndexInfo rows by INDEX_NAME
     Map<String, DatabaseTableIndexResponse> indexMap = new LinkedHashMap<>();
-    try (ResultSet rs = meta.getIndexInfo(null, null, tableName, false, false)) {
+    // approximate=true: read existing dictionary stats instead of forcing a fresh
+    // ANALYZE. On Oracle, approximate=false makes the driver run DBMS_STATS, which
+    // throws ORA-20000 ("insufficient privileges") on tables the user can't analyze;
+    // other dialects ignore this flag, so true is safe everywhere and cheaper.
+    try (ResultSet rs = meta.getIndexInfo(null, null, tableName, false, true)) {
       while (rs.next()) {
         String indexName = rs.getString("INDEX_NAME");
         String col = rs.getString("COLUMN_NAME");

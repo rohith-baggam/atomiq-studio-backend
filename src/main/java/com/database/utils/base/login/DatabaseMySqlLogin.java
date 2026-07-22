@@ -22,6 +22,15 @@ public class DatabaseMySqlLogin extends DatabaseProfileLoginBase {
 
   @Override
   public String buildJdbcUrl() {
-    return "jdbc:mysql://" + request.host + ":" + request.port + "/" + request.dbName;
+    // socketTimeout=0 → never abort a long-running read (big joins / schema
+    // pulls). The connect handshake is bounded separately via DriverManager's
+    // login timeout, and per-statement limits via the query timeout.
+    return "jdbc:mysql://"
+        + request.host
+        + ":"
+        + request.port
+        + "/"
+        + request.dbName
+        + "?socketTimeout=0";
   }
 }
