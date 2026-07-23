@@ -9,7 +9,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -93,7 +92,7 @@ public class DatabaseQueryExecutionUtility {
         }
         List<Object> row = new ArrayList<>(colCount);
         for (int i = 1; i <= colCount; i++) {
-          row.add(safeValue(rs, md, i));
+          row.add(JdbcValueReader.read(rs, md, i));
         }
         rows.add(row);
       }
@@ -103,17 +102,6 @@ public class DatabaseQueryExecutionUtility {
 
   private DatabaseQueryResultResponse readUpdate(int affected) {
     return DatabaseQueryResultResponse.ofUpdate(affected, "Statement executed successfully");
-  }
-
-  private Object safeValue(ResultSet rs, ResultSetMetaData md, int i) throws SQLException {
-    int type = md.getColumnType(i);
-    if (type == Types.BLOB
-        || type == Types.BINARY
-        || type == Types.VARBINARY
-        || type == Types.LONGVARBINARY) {
-      return rs.getObject(i) == null ? null : "[binary]";
-    }
-    return rs.getObject(i);
   }
 
   private int clamp(Integer requested, int dflt, int max) {

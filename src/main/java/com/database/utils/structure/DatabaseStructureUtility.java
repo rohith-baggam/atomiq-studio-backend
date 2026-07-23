@@ -19,6 +19,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -415,11 +416,12 @@ public class DatabaseStructureUtility {
         ps.setInt(idx, offset);
       }
       try (ResultSet rs = ps.executeQuery()) {
-        int colCount = rs.getMetaData().getColumnCount();
+        ResultSetMetaData rowMeta = rs.getMetaData();
+        int colCount = rowMeta.getColumnCount();
         while (rs.next()) {
           List<Object> row = new ArrayList<>(colCount);
           for (int i = 1; i <= colCount; i++) {
-            row.add(rs.getObject(i));
+            row.add(JdbcValueReader.read(rs, rowMeta, i));
           }
           rows.add(row);
         }
