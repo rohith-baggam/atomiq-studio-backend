@@ -14,6 +14,8 @@ import com.database.utils.database.DatabaseConnectionUtility;
 import com.database.utils.structure.DatabaseQueryExecutionUtility;
 import com.database.utils.structure.DatabaseStructureUtility;
 import com.database.utils.structure.DatabaseTableDependencyUtility;
+import com.database.utils.structure.SqlWriteGuard;
+import com.shared.exceptions.ValidationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.sql.Connection;
@@ -73,9 +75,18 @@ public class DatabaseTableStructureService {
   public List<DatabaseQueryResultResponse> runQuery(
       DbUserEntity dbUserEntity, DatabaseDbRunQueryRequest request) throws SQLException {
 
-    // NOTE: read-only / read-write permission is enforced in the FRONTEND
-    // (features/query — write statements are blocked before they are sent).
-    // The backend deliberately does not gate by profile.readOnly here.
+    // Read-only enforcement. The frontend also blocks writes before sending, but
+    // that gate is bypassable (local HTTP API), so a profile flagged read-only
+    // must be enforced here too — otherwise the flag protects nothing.
+    if (Boolean.TRUE.equals(dbUserEntity.readOnly)) {
+      String write = SqlWriteGuard.firstWriteKeyword(request.query);
+      if (write != null) {
+        throw new ValidationException(
+            "Read-only connection: "
+                + write
+                + " is not allowed. Switch the profile to Read/Write to run write statements.");
+      }
+    }
     try (Connection connection = databaseConnectionUtility.getDatabaseConnection(dbUserEntity)) {
       return databaseQueryExecutionUtility.runQuery(connection, request);
     }

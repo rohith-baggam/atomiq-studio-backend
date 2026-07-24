@@ -79,6 +79,87 @@ public class DatabaseStructureUtility {
     }
   }
 
+  /** Quote a schema/table/column identifier, escaping any embedded double-quote. */
+  private String quoteIdent(String identifier) {
+    return "\"" + identifier.replace("\"", "\"\"") + "\"";
+  }
+
+  /**
+   * Fast row-count for the table-list overview. Reads the dialect's cached catalog statistics
+   * (cheap, no scan) instead of {@code SELECT COUNT(*)}, which is a full table scan that takes
+   * seconds-to-minutes per table on a multi-GB database and made the table list unusable. The
+   * estimate is approximate by nature (DBeaver/DataGrip show catalog estimates the same way). Falls
+   * back to an exact {@code COUNT(*)} whenever the estimate is unavailable (table never analyzed →
+   * NULL / 0 / -1) or the stats query errors, so a table never misreports a real, non-zero size.
+   */
+  private long estimateRowCount(
+      Connection connection, SqlDialect dialect, String schema, String table, String qualified) {
+    try {
+      Long estimate = null;
+      switch (dialect) {
+        case POSTGRES:
+          try (PreparedStatement ps =
+              connection.prepareStatement(
+                  "SELECT reltuples::bigint FROM pg_class WHERE oid = to_regclass(?)")) {
+            ps.setString(1, qualified);
+            try (ResultSet rs = ps.executeQuery()) {
+              if (rs.next() && rs.getObject(1) != null) estimate = rs.getLong(1);
+            }
+          }
+          break;
+        case MYSQL:
+          try (PreparedStatement ps =
+              connection.prepareStatement(
+                  "SELECT TABLE_ROWS FROM information_schema.TABLES"
+                      + " WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?")) {
+            ps.setString(1, schema);
+            ps.setString(2, table);
+            try (ResultSet rs = ps.executeQuery()) {
+              if (rs.next() && rs.getObject(1) != null) estimate = rs.getLong(1);
+            }
+          }
+          break;
+        case ORACLE:
+          try (PreparedStatement ps =
+              connection.prepareStatement(
+                  "SELECT NUM_ROWS FROM ALL_TABLES WHERE OWNER = ? AND TABLE_NAME = ?")) {
+            ps.setString(1, schema);
+            ps.setString(2, table);
+            try (ResultSet rs = ps.executeQuery()) {
+              if (rs.next() && rs.getObject(1) != null) estimate = rs.getLong(1);
+            }
+          }
+          break;
+        case MSSQL:
+          try (PreparedStatement ps =
+              connection.prepareStatement(
+                  "SELECT SUM(row_count) FROM sys.dm_db_partition_stats"
+                      + " WHERE object_id = OBJECT_ID(?) AND index_id IN (0,1)")) {
+            ps.setString(1, qualified);
+            try (ResultSet rs = ps.executeQuery()) {
+              if (rs.next() && rs.getObject(1) != null) estimate = rs.getLong(1);
+            }
+          }
+          break;
+      }
+      if (estimate != null && estimate > 0) {
+        return estimate;
+      }
+    } catch (SQLException ignored) {
+      // fall through to the exact count
+    }
+    return exactRowCount(connection, qualified);
+  }
+
+  private long exactRowCount(Connection connection, String qualified) {
+    try (Statement st = connection.createStatement();
+        ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + qualified)) {
+      return rs.next() ? rs.getLong(1) : 0;
+    } catch (SQLException e) {
+      return 0;
+    }
+  }
+
   public List<DatabaseSchemaTableListResponse> getDatabaseTableList(Connection connection)
       throws SQLException {
 
@@ -121,16 +202,10 @@ public class DatabaseStructureUtility {
           while (tableRs.next()) {
 
             String tableName = tableRs.getString("TABLE_NAME");
-            String qualifiedTable = "\"" + schemaName + "\".\"" + tableName + "\"";
+            String qualifiedTable = quoteIdent(schemaName) + "." + quoteIdent(tableName);
 
-            long rowCount = 0;
-            try (Statement st = connection.createStatement();
-                ResultSet countRs = st.executeQuery("SELECT COUNT(*) FROM " + qualifiedTable)) {
-
-              if (countRs.next()) {
-                rowCount = countRs.getLong(1);
-              }
-            }
+            long rowCount =
+                estimateRowCount(connection, dialect, schemaName, tableName, qualifiedTable);
 
             int columnCount = 0;
             try (ResultSet columnRs = meta.getColumns(null, schemaName, tableName, "%")) {
@@ -152,9 +227,26 @@ public class DatabaseStructureUtility {
   }
 
   public boolean isTableNameExist(Connection connection, String tableName) throws SQLException {
+    if (tableName == null || tableName.isEmpty()) {
+      return false;
+    }
     DatabaseMetaData meta = connection.getMetaData();
-    try (ResultSet rs = meta.getTables(null, null, tableName, new String[] {"TABLE"})) {
-      return rs.next();
+    // getTables treats `_` and `%` as wildcards, so an unescaped name like "user_x"
+    // would spuriously match "userax". Escape the pattern, then confirm an EXACT
+    // name match — never trust the pattern result alone (it feeds SQL string-built
+    // below, so a loose match is both a correctness and an injection concern).
+    String esc = meta.getSearchStringEscape();
+    String pattern = tableName;
+    if (esc != null && !esc.isEmpty()) {
+      pattern = tableName.replace(esc, esc + esc).replace("_", esc + "_").replace("%", esc + "%");
+    }
+    try (ResultSet rs = meta.getTables(null, null, pattern, new String[] {"TABLE"})) {
+      while (rs.next()) {
+        if (tableName.equals(rs.getString("TABLE_NAME"))) {
+          return true;
+        }
+      }
+      return false;
     }
   }
 
@@ -282,7 +374,7 @@ public class DatabaseStructureUtility {
       throw new ValidationException("Invalid tableName");
     }
 
-    String table = "\"" + request.tableName + "\"";
+    String table = quoteIdent(request.tableName);
     SqlDialect dialect = getSqlDialect(connection);
 
     List<DatabaseTableColumnMeta> columns = new ArrayList<>();
@@ -322,7 +414,7 @@ public class DatabaseStructureUtility {
       if (val == null) {
         val = "";
       }
-      String qcol = "\"" + col + "\"";
+      String qcol = quoteIdent(col);
       String textCol = castToText(dialect, qcol);
       switch (op) {
         case "eq":
@@ -351,7 +443,7 @@ public class DatabaseStructureUtility {
       String needle = "%" + request.search.toLowerCase() + "%";
       List<String> orClauses = new ArrayList<>();
       for (String col : columnNames) {
-        orClauses.add("LOWER(" + castToText(dialect, "\"" + col + "\"") + ") LIKE ?");
+        orClauses.add("LOWER(" + castToText(dialect, quoteIdent(col)) + ") LIKE ?");
         whereParams.add(needle);
       }
       if (!orClauses.isEmpty()) {
@@ -360,18 +452,6 @@ public class DatabaseStructureUtility {
     }
 
     String whereSql = clauses.isEmpty() ? "" : " WHERE " + String.join(" AND ", clauses);
-
-    long count = 0;
-    try (PreparedStatement ps =
-        connection.prepareStatement("SELECT COUNT(*) FROM " + table + whereSql)) {
-      for (int i = 0; i < whereParams.size(); i++) {
-        ps.setObject(i + 1, whereParams.get(i));
-      }
-      try (ResultSet rs = ps.executeQuery()) {
-        rs.next();
-        count = rs.getLong(1);
-      }
-    }
 
     int limit = (request.limit == null || request.limit <= 0) ? 10 : Math.min(request.limit, 1000);
     int offset = (request.offset == null || request.offset < 0) ? 0 : request.offset;
@@ -382,8 +462,13 @@ public class DatabaseStructureUtility {
         throw new ValidationException("Invalid sort column: " + request.sortBy);
       }
       String dir = "DESC".equalsIgnoreCase(request.sortDir) ? "DESC" : "ASC";
-      orderBy = " ORDER BY \"" + request.sortBy + "\" " + dir;
+      orderBy = " ORDER BY " + quoteIdent(request.sortBy) + " " + dir;
     }
+
+    // Fetch one extra row so we can tell whether a next page exists WITHOUT a
+    // COUNT(*): on a multi-GB table the count is a full scan, but "is there a
+    // row N+1?" is answered by the page query itself.
+    int fetch = limit + 1;
 
     boolean useOffsetFetch = dialect == SqlDialect.MSSQL || dialect == SqlDialect.ORACLE;
     String sql;
@@ -410,9 +495,9 @@ public class DatabaseStructureUtility {
       }
       if (useOffsetFetch) {
         ps.setInt(idx++, offset);
-        ps.setInt(idx, limit);
+        ps.setInt(idx, fetch);
       } else {
-        ps.setInt(idx++, limit);
+        ps.setInt(idx++, fetch);
         ps.setInt(idx, offset);
       }
       try (ResultSet rs = ps.executeQuery()) {
@@ -428,8 +513,30 @@ public class DatabaseStructureUtility {
       }
     }
 
-    boolean hasNext = offset + rows.size() < count;
+    // Drop the probe row if it came back — it only told us a next page exists.
+    boolean hasNext = rows.size() > limit;
+    if (hasNext) {
+      rows.remove(rows.size() - 1);
+    }
     boolean hasPrev = offset > 0;
+
+    // COUNT(*) only when the client asks (first load / filter / search / sort).
+    // On plain pagination it keeps the count it already has, so we return -1
+    // ("unchanged") and skip the scan entirely.
+    boolean withCount = request.withCount == null || request.withCount;
+    long count = -1;
+    if (withCount) {
+      try (PreparedStatement ps =
+          connection.prepareStatement("SELECT COUNT(*) FROM " + table + whereSql)) {
+        for (int i = 0; i < whereParams.size(); i++) {
+          ps.setObject(i + 1, whereParams.get(i));
+        }
+        try (ResultSet rs = ps.executeQuery()) {
+          rs.next();
+          count = rs.getLong(1);
+        }
+      }
+    }
 
     return new DatabaseTableDataResponse(columns, rows, hasNext, hasPrev, count);
   }
@@ -480,7 +587,7 @@ public class DatabaseStructureUtility {
 
     // row count + column count
     String qualified =
-        (schema != null) ? "\"" + schema + "\".\"" + tableName + "\"" : "\"" + tableName + "\"";
+        (schema != null) ? quoteIdent(schema) + "." + quoteIdent(tableName) : quoteIdent(tableName);
     long rowCount = 0;
     try (Statement st = connection.createStatement();
         ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + qualified)) {
@@ -514,7 +621,7 @@ public class DatabaseStructureUtility {
       }
     }
     String qualified =
-        (schema != null) ? "\"" + schema + "\".\"" + tableName + "\"" : "\"" + tableName + "\"";
+        (schema != null) ? quoteIdent(schema) + "." + quoteIdent(tableName) : quoteIdent(tableName);
 
     List<String> defs = new ArrayList<>();
     try (ResultSet rs = meta.getColumns(null, null, tableName, "%")) {
@@ -527,7 +634,7 @@ public class DatabaseStructureUtility {
         String columnDefault = rs.getString("COLUMN_DEF");
 
         StringBuilder col = new StringBuilder();
-        col.append("  \"").append(name).append("\" ").append(renderType(type, size, scale));
+        col.append("  ").append(quoteIdent(name)).append(" ").append(renderType(type, size, scale));
         if (columnDefault != null && !columnDefault.isBlank()) {
           col.append(" DEFAULT ").append(columnDefault);
         }
@@ -548,8 +655,9 @@ public class DatabaseStructureUtility {
     }
     if (!pkBySeq.isEmpty()) {
       String cols =
-          pkBySeq.values().stream().map(c -> "\"" + c + "\"").collect(Collectors.joining(", "));
-      defs.add("  CONSTRAINT \"" + pkName + "\" PRIMARY KEY (" + cols + ")");
+          pkBySeq.values().stream().map(this::quoteIdent).collect(Collectors.joining(", "));
+      String constraint = (pkName != null) ? "CONSTRAINT " + quoteIdent(pkName) + " " : "";
+      defs.add("  " + constraint + "PRIMARY KEY (" + cols + ")");
     }
 
     return "CREATE TABLE " + qualified + " (\n" + String.join(",\n", defs) + "\n);";

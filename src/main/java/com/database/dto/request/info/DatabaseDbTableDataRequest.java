@@ -18,6 +18,17 @@ public class DatabaseDbTableDataRequest {
   @DefaultValue("0")
   public Integer offset;
 
+  /**
+   * Whether to compute the exact total row count. A filtered {@code COUNT(*)} is a full scan —
+   * cheap on a small table, seconds-to-minutes on a multi-GB one — so the client asks for it only
+   * when the total can change (first load / filter / search / sort), and skips it on plain
+   * pagination, where it keeps the count it already has. When false the response returns {@code
+   * count = -1} ("unchanged").
+   */
+  @QueryParam("withCount")
+  @DefaultValue("true")
+  public Boolean withCount;
+
   @QueryParam("sortBy")
   public String sortBy;
 

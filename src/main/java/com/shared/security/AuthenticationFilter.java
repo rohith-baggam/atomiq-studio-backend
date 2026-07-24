@@ -22,7 +22,14 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     if (subject == null) {
       return;
     }
-    UUID userId = UUID.fromString(subject);
+    UUID userId;
+    try {
+      userId = UUID.fromString(subject);
+    } catch (IllegalArgumentException e) {
+      // A malformed subject is a bad token, not a server error — surface it as 401
+      // rather than letting it fall through to the generic 500 mapper.
+      throw new UnauthorizedException("Invalid token subject");
+    }
     DbUserEntity dbUserEntity =
         dbUserEntityRepository
             .find("id", userId)

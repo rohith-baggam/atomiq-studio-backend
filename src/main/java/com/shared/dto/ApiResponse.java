@@ -17,12 +17,16 @@ public class ApiResponse<T> {
   }
 
   public static <T> Response error(T results, String message, Response.Status status) {
+    return error(results, message, (Response.StatusType) status);
+  }
+
+  public static <T> Response error(T results, String message, Response.StatusType status) {
     ApiResponse<T> result = new ApiResponse<>();
     result.message = message;
     result.results = results;
     if (status == null) {
       status = Response.Status.BAD_REQUEST;
     }
-    return Response.status(status).entity(result).build();
+    return Response.status(status.getStatusCode()).entity(result).build();
   }
 }

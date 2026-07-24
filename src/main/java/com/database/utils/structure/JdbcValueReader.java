@@ -51,8 +51,35 @@ final class JdbcValueReader {
         return rs.getObject(i, LocalTime.class);
       case Types.TIME_WITH_TIMEZONE:
         return rs.getObject(i, OffsetTime.class);
+      case Types.CLOB:
+      case Types.NCLOB:
+      case Types.SQLXML:
+        // LOB/XML handles don't serialize (their toString is useless); read the text instead.
+        return rs.getString(i);
+      case Types.STRUCT:
+      case Types.JAVA_OBJECT:
+      case Types.OTHER:
+      case Types.REF:
+      case Types.ARRAY:
+        // Opaque/structured types (incl. Oracle XMLType, whose getObject throws
+        // NoClassDefFoundError without the optional xdb jars) — read as text, else placeholder.
+        return readOpaque(rs, i);
       default:
-        return rs.getObject(i);
+        try {
+          return rs.getObject(i);
+        } catch (Throwable t) {
+          // A driver that needs an optional jar to materialise a value must not 500 the
+          // whole grid/query — fall back to the text form, then a placeholder.
+          return readOpaque(rs, i);
+        }
+    }
+  }
+
+  private static Object readOpaque(ResultSet rs, int i) {
+    try {
+      return rs.getString(i);
+    } catch (Throwable t) {
+      return "[unsupported]";
     }
   }
 }
