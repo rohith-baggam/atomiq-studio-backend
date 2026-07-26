@@ -1,0 +1,76 @@
+package com.database.resources.structure;
+
+import com.database.dto.request.generic.DatabaseDbTableNameGenericRequest;
+import com.database.dto.request.info.DatabaseDbRunQueryRequest;
+import com.database.dto.request.info.DatabaseDbTableDataRequest;
+import com.database.services.structure.DatabaseTableStructureService;
+import com.shared.dto.ApiResponse;
+import com.shared.security.CurrentUser;
+import io.quarkus.security.Authenticated;
+import jakarta.inject.Inject;
+import jakarta.validation.Valid;
+import jakarta.ws.rs.BeanParam;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import java.sql.SQLException;
+
+@Path("database/api/structure")
+@Authenticated
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+public class DatabaseTableStructureResource {
+
+  @Inject CurrentUser currentUser;
+
+  @Inject DatabaseTableStructureService databaseTableStructureService;
+
+  @GET
+  @Path("table-list-api/")
+  public Response getDbTableListApi() throws SQLException {
+
+    return ApiResponse.success(
+        databaseTableStructureService.getDatabaseTableList(currentUser.getUser()), null);
+  }
+
+  @GET
+  @Path("table-field-properties-api/")
+  public Response getDbTableDetailApi(@BeanParam DatabaseDbTableNameGenericRequest request)
+      throws SQLException {
+
+    return ApiResponse.success(
+        databaseTableStructureService.getDatabaseFieldProperties(
+            currentUser.getUser(), request.tableName),
+        null);
+  }
+
+  @GET
+  @Path("table-data-api/")
+  public Response getDbTableDataApi(@BeanParam DatabaseDbTableDataRequest request)
+      throws SQLException {
+
+    return ApiResponse.success(
+        databaseTableStructureService.getDbTabledata(currentUser.getUser(), request), null);
+  }
+
+  @GET
+  @Path("table-detail-api")
+  public Response getDbTableDetailsApi(@BeanParam DatabaseDbTableNameGenericRequest request)
+      throws SQLException {
+
+    return ApiResponse.success(
+        databaseTableStructureService.getDbTableDetails(currentUser.getUser(), request), null);
+  }
+
+  @POST
+  @Path("run-query/")
+  public Response getRunQueryResponse(@Valid DatabaseDbRunQueryRequest request)
+      throws SQLException {
+    return ApiResponse.success(
+        databaseTableStructureService.runQuery(currentUser.getUser(), request), null);
+  }
+}

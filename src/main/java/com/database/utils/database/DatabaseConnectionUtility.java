@@ -12,6 +12,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.UUID;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 public class DatabaseConnectionUtility extends DatabaseProfileLoginBaseUtility {
@@ -19,6 +20,12 @@ public class DatabaseConnectionUtility extends DatabaseProfileLoginBaseUtility {
   @Inject DbUserEntityRepository databaseUserEntityRepository;
 
   @Inject DatabaseTestConnectionService databaseTestConnectionService;
+
+  // Bounds only the login handshake, so a dead/unreachable host fails fast
+  // instead of blocking a worker thread. Query duration is unaffected — that's
+  // governed by the per-statement query timeout, not this.
+  @ConfigProperty(name = "atomiq.db.connect-timeout-seconds", defaultValue = "15")
+  int connectTimeoutSeconds;
 
   public DbUserEntity getDbUserEntity(UUID dbUserEntityId) {
     DbUserEntity dbUserEntity =
@@ -67,6 +74,9 @@ public class DatabaseConnectionUtility extends DatabaseProfileLoginBaseUtility {
       DatabaseTestConnectionRequest databaseTestConnectionRequest) throws SQLException {
 
     String jdbcUrl = this.getDatabaseConnectionStringWithRequest(databaseTestConnectionRequest);
+    // Global login timeout applied to every JDBC driver (covers Oracle/MSSQL,
+    // whose URL param names differ). Only the handshake is bounded.
+    DriverManager.setLoginTimeout(connectTimeoutSeconds);
     Connection connection =
         DriverManager.getConnection(
             jdbcUrl,

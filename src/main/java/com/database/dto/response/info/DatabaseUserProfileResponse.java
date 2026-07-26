@@ -17,6 +17,7 @@ public class DatabaseUserProfileResponse {
   public Integer port;
   public String password;
   public DatabaseEnvironment environment;
+  public Boolean readOnly;
   public LocalDateTime lastConnectedTime;
   public DatabaseConnectionStatus lastConnectionStatus;
 
@@ -32,7 +33,8 @@ public class DatabaseUserProfileResponse {
       String password,
       DatabaseEnvironment environment,
       LocalDateTime lastConnectedTime,
-      DatabaseConnectionStatus lastConnectionStatus) {
+      DatabaseConnectionStatus lastConnectionStatus,
+      Boolean readOnly) {
     this.dbId = dbId;
     this.dbName = dbName;
     this.dbType = dbType;
@@ -42,6 +44,7 @@ public class DatabaseUserProfileResponse {
     this.host = host;
     this.port = port;
     this.environment = environment;
+    this.readOnly = readOnly;
     this.lastConnectedTime = lastConnectedTime;
     this.lastConnectionStatus = lastConnectionStatus;
   }

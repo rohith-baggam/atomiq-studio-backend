@@ -1,12 +1,16 @@
 package com.database.resources.info;
 
 import com.database.dto.request.connection.DatabaseProfileTestConnectionRequest;
+import com.database.dto.request.connection.DatabaseUpdateProfileRequest;
 import com.database.services.info.DatabaseUserProfileService;
 import com.shared.dto.ApiResponse;
+import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
@@ -25,10 +29,25 @@ public class DatabaseUserProfileResource {
     return ApiResponse.success(databaseUserProfileService.getDbUserEntityList(), "ok");
   }
 
+  @GET
+  @Path("me/")
+  @Authenticated
+  public Response me() {
+    return ApiResponse.success(databaseUserProfileService.entityDetails(), null);
+  }
+
   @DELETE
   @Path("delete-profile-api")
   public Response deleteProfileApi(DatabaseProfileTestConnectionRequest request) {
     databaseUserProfileService.deleteDbUser(request);
     return ApiResponse.success(null, "Deleted successfully");
+  }
+
+  @PATCH
+  @Path("update-profile-api")
+  @Authenticated
+  public Response updateProfileApi(@Valid DatabaseUpdateProfileRequest request) {
+    return ApiResponse.success(
+        databaseUserProfileService.updateProfile(request), "Updated successfully");
   }
 }
