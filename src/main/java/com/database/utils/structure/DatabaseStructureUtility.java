@@ -79,12 +79,84 @@ public class DatabaseStructureUtility {
     }
   }
 
+  /**
+   * Quote a single identifier for the dialect. MySQL rejects ANSI double quotes under its default
+   * sql_mode (they're string literals there), so it needs backticks; every other supported engine
+   * uses double quotes. The escape doubles any embedded quote char so names are always safe.
+   */
+  private String quoteIdent(SqlDialect dialect, String name) {
+    if (dialect == SqlDialect.MYSQL) {
+      return "`" + name.replace("`", "``") + "`";
+    }
+    return "\"" + name.replace("\"", "\"\"") + "\"";
+  }
+
+  /** Build a dialect-quoted, optionally schema/catalog-qualified table reference. */
+  private String qualifiedName(SqlDialect dialect, String container, String table) {
+    return (container == null || container.isEmpty())
+        ? quoteIdent(dialect, table)
+        : quoteIdent(dialect, container) + "." + quoteIdent(dialect, table);
+  }
+
+  /**
+   * Collect the tables of one namespace (a schema for Postgres/MSSQL/Oracle, a catalog/database for
+   * MySQL) with per-table row and column counts. Shared by both branches of getDatabaseTableList.
+   */
+  private List<DatabaseTableListResponse> collectTables(
+      Connection connection,
+      DatabaseMetaData meta,
+      SqlDialect dialect,
+      String catalog,
+      String schema)
+      throws SQLException {
+
+    List<DatabaseTableListResponse> tables = new ArrayList<>();
+    // For MySQL the namespace is the catalog; for the others it's the schema.
+    String container = dialect == SqlDialect.MYSQL ? catalog : schema;
+
+    try (ResultSet tableRs = meta.getTables(catalog, schema, "%", new String[] {"TABLE"})) {
+      while (tableRs.next()) {
+        String tableName = tableRs.getString("TABLE_NAME");
+        String qualifiedTable = qualifiedName(dialect, container, tableName);
+
+        long rowCount = 0;
+        try (Statement st = connection.createStatement();
+            ResultSet countRs = st.executeQuery("SELECT COUNT(*) FROM " + qualifiedTable)) {
+          if (countRs.next()) {
+            rowCount = countRs.getLong(1);
+          }
+        }
+
+        int columnCount = 0;
+        try (ResultSet columnRs = meta.getColumns(catalog, schema, tableName, "%")) {
+          while (columnRs.next()) {
+            columnCount++;
+          }
+        }
+
+        tables.add(new DatabaseTableListResponse(tableName, rowCount, columnCount));
+      }
+    }
+    return tables;
+  }
+
   public List<DatabaseSchemaTableListResponse> getDatabaseTableList(Connection connection)
       throws SQLException {
 
     List<DatabaseSchemaTableListResponse> results = new ArrayList<>();
     DatabaseMetaData meta = connection.getMetaData();
     SqlDialect dialect = getSqlDialect(connection);
+
+    // MySQL exposes databases as JDBC *catalogs*, not schemas — meta.getSchemas() is empty there,
+    // so the schema-based enumeration below finds nothing. Enumerate the connected database's
+    // tables via the catalog instead and present it as a single namespace.
+    if (dialect == SqlDialect.MYSQL) {
+      String catalog = connection.getCatalog();
+      results.add(
+          new DatabaseSchemaTableListResponse(
+              catalog, collectTables(connection, meta, dialect, catalog, null)));
+      return results;
+    }
 
     // Oracle equates schemas with database users, so getSchemas() returns dozens of
     // Oracle-maintained system users (SYS, MDSYS, XDB, ...). Querying those directly can
@@ -114,37 +186,9 @@ public class DatabaseStructureUtility {
           continue;
         }
 
-        List<DatabaseTableListResponse> tables = new ArrayList<>();
-
-        try (ResultSet tableRs = meta.getTables(null, schemaName, "%", new String[] {"TABLE"})) {
-
-          while (tableRs.next()) {
-
-            String tableName = tableRs.getString("TABLE_NAME");
-            String qualifiedTable = "\"" + schemaName + "\".\"" + tableName + "\"";
-
-            long rowCount = 0;
-            try (Statement st = connection.createStatement();
-                ResultSet countRs = st.executeQuery("SELECT COUNT(*) FROM " + qualifiedTable)) {
-
-              if (countRs.next()) {
-                rowCount = countRs.getLong(1);
-              }
-            }
-
-            int columnCount = 0;
-            try (ResultSet columnRs = meta.getColumns(null, schemaName, tableName, "%")) {
-
-              while (columnRs.next()) {
-                columnCount++;
-              }
-            }
-
-            tables.add(new DatabaseTableListResponse(tableName, rowCount, columnCount));
-          }
-        }
-
-        results.add(new DatabaseSchemaTableListResponse(schemaName, tables));
+        results.add(
+            new DatabaseSchemaTableListResponse(
+                schemaName, collectTables(connection, meta, dialect, null, schemaName)));
       }
     }
 
@@ -282,13 +326,29 @@ public class DatabaseStructureUtility {
       throw new ValidationException("Invalid tableName");
     }
 
-    String table = "\"" + request.tableName + "\"";
     SqlDialect dialect = getSqlDialect(connection);
 
     List<DatabaseTableColumnMeta> columns = new ArrayList<>();
     Set<String> columnNames = new HashSet<>();
     DatabaseMetaData meta = connection.getMetaData();
-    try (ResultSet rs = meta.getColumns(null, null, request.tableName, "%")) {
+
+    // Resolve the owning schema so the FROM clause is fully qualified. Without
+    // this the query runs unqualified and only resolves against the search_path
+    // (public), so any table living in another schema — e.g. audit.* — fails
+    // with "relation ... does not exist", even though isTableNameExist (which
+    // searches all schemas) passed. Mirrors getDbTableDetails / getCreateTableDdl.
+    String schema = null;
+    String catalog = null;
+    try (ResultSet rs = meta.getTables(null, null, request.tableName, new String[] {"TABLE"})) {
+      if (rs.next()) {
+        catalog = rs.getString("TABLE_CAT");
+        schema = rs.getString("TABLE_SCHEM");
+      }
+    }
+    // MySQL qualifies by catalog (database), the others by schema.
+    String container = dialect == SqlDialect.MYSQL ? catalog : schema;
+    String table = qualifiedName(dialect, container, request.tableName);
+    try (ResultSet rs = meta.getColumns(catalog, schema, request.tableName, "%")) {
       while (rs.next()) {
         String columnName = rs.getString("COLUMN_NAME");
         columns.add(new DatabaseTableColumnMeta(columnName, rs.getString("TYPE_NAME")));
@@ -322,7 +382,7 @@ public class DatabaseStructureUtility {
       if (val == null) {
         val = "";
       }
-      String qcol = "\"" + col + "\"";
+      String qcol = quoteIdent(dialect, col);
       String textCol = castToText(dialect, qcol);
       switch (op) {
         case "eq":
@@ -351,7 +411,7 @@ public class DatabaseStructureUtility {
       String needle = "%" + request.search.toLowerCase() + "%";
       List<String> orClauses = new ArrayList<>();
       for (String col : columnNames) {
-        orClauses.add("LOWER(" + castToText(dialect, "\"" + col + "\"") + ") LIKE ?");
+        orClauses.add("LOWER(" + castToText(dialect, quoteIdent(dialect, col)) + ") LIKE ?");
         whereParams.add(needle);
       }
       if (!orClauses.isEmpty()) {
@@ -382,7 +442,7 @@ public class DatabaseStructureUtility {
         throw new ValidationException("Invalid sort column: " + request.sortBy);
       }
       String dir = "DESC".equalsIgnoreCase(request.sortDir) ? "DESC" : "ASC";
-      orderBy = " ORDER BY \"" + request.sortBy + "\" " + dir;
+      orderBy = " ORDER BY " + quoteIdent(dialect, request.sortBy) + " " + dir;
     }
 
     boolean useOffsetFetch = dialect == SqlDialect.MSSQL || dialect == SqlDialect.ORACLE;
@@ -467,20 +527,24 @@ public class DatabaseStructureUtility {
     List<DatabaseTableIndexResponse> indexes = new ArrayList<>(indexMap.values());
 
     // table identity + comment
+    SqlDialect dialect = getSqlDialect(connection);
     String schema = null;
+    String catalog = null;
     String tableType = null;
     String comment = null;
     try (ResultSet rs = meta.getTables(null, null, tableName, new String[] {"TABLE"})) {
       if (rs.next()) {
+        catalog = rs.getString("TABLE_CAT");
         schema = rs.getString("TABLE_SCHEM");
         tableType = rs.getString("TABLE_TYPE");
         comment = rs.getString("REMARKS");
       }
     }
+    // MySQL's namespace is the catalog (database); the others use the schema.
+    String container = dialect == SqlDialect.MYSQL ? catalog : schema;
 
     // row count + column count
-    String qualified =
-        (schema != null) ? "\"" + schema + "\".\"" + tableName + "\"" : "\"" + tableName + "\"";
+    String qualified = qualifiedName(dialect, container, tableName);
     long rowCount = 0;
     try (Statement st = connection.createStatement();
         ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + qualified)) {
@@ -489,7 +553,7 @@ public class DatabaseStructureUtility {
     }
 
     int columnCount = 0;
-    try (ResultSet rs = meta.getColumns(null, null, tableName, "%")) {
+    try (ResultSet rs = meta.getColumns(catalog, schema, tableName, "%")) {
       while (rs.next()) {
         columnCount++;
       }
@@ -497,7 +561,7 @@ public class DatabaseStructureUtility {
 
     DatabaseTableInfoResponse info =
         new DatabaseTableInfoResponse(
-            tableName, schema, tableType, comment, rowCount, columnCount, indexes.size());
+            tableName, container, tableType, comment, rowCount, columnCount, indexes.size());
 
     String createTableDdl = this.getCreateTableDdl(connection, tableName);
 
@@ -506,18 +570,21 @@ public class DatabaseStructureUtility {
 
   public String getCreateTableDdl(Connection connection, String tableName) throws SQLException {
     DatabaseMetaData meta = connection.getMetaData();
+    SqlDialect dialect = getSqlDialect(connection);
 
     String schema = null;
+    String catalog = null;
     try (ResultSet rs = meta.getTables(null, null, tableName, new String[] {"TABLE"})) {
       if (rs.next()) {
+        catalog = rs.getString("TABLE_CAT");
         schema = rs.getString("TABLE_SCHEM");
       }
     }
-    String qualified =
-        (schema != null) ? "\"" + schema + "\".\"" + tableName + "\"" : "\"" + tableName + "\"";
+    String container = dialect == SqlDialect.MYSQL ? catalog : schema;
+    String qualified = qualifiedName(dialect, container, tableName);
 
     List<String> defs = new ArrayList<>();
-    try (ResultSet rs = meta.getColumns(null, null, tableName, "%")) {
+    try (ResultSet rs = meta.getColumns(catalog, schema, tableName, "%")) {
       while (rs.next()) {
         String name = rs.getString("COLUMN_NAME");
         String type = rs.getString("TYPE_NAME");
@@ -527,7 +594,10 @@ public class DatabaseStructureUtility {
         String columnDefault = rs.getString("COLUMN_DEF");
 
         StringBuilder col = new StringBuilder();
-        col.append("  \"").append(name).append("\" ").append(renderType(type, size, scale));
+        col.append("  ")
+            .append(quoteIdent(dialect, name))
+            .append(" ")
+            .append(renderType(type, size, scale));
         if (columnDefault != null && !columnDefault.isBlank()) {
           col.append(" DEFAULT ").append(columnDefault);
         }
@@ -548,8 +618,10 @@ public class DatabaseStructureUtility {
     }
     if (!pkBySeq.isEmpty()) {
       String cols =
-          pkBySeq.values().stream().map(c -> "\"" + c + "\"").collect(Collectors.joining(", "));
-      defs.add("  CONSTRAINT \"" + pkName + "\" PRIMARY KEY (" + cols + ")");
+          pkBySeq.values().stream()
+              .map(c -> quoteIdent(dialect, c))
+              .collect(Collectors.joining(", "));
+      defs.add("  CONSTRAINT " + quoteIdent(dialect, pkName) + " PRIMARY KEY (" + cols + ")");
     }
 
     return "CREATE TABLE " + qualified + " (\n" + String.join(",\n", defs) + "\n);";

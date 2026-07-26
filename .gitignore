@@ -48,6 +48,7 @@ md/
 .certs/
 
 *atomic.db*
+atomic.db
 # Added by code-review-graph
 .code-review-graph/
 
