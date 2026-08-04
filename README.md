@@ -12,10 +12,13 @@ AtomIQ is a native desktop application (built with Tauri, not Electron), so it s
 
 ```shell
 brew tap rohith-baggam/atomiq
+brew trust rohith-baggam/atomiq
 brew install --cask atomiq
 ```
 
 This is the smoothest way to install on a Mac: Homebrew handles the security prompt for you, so AtomIQ opens straight away. It also keeps you up to date with `brew upgrade --cask atomiq`.
+
+The `brew trust` line is a one-time step — Homebrew 6 won't load casks from a third-party tap until you explicitly trust it.
 
 If you'd rather download the `.dmg` directly, see [the note below](#opening-atomiq-the-first-time) — macOS will show a warning you need to click through once.
 
