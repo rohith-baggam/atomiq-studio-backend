@@ -8,6 +8,19 @@ AtomIQ is a native desktop application (built with Tauri, not Electron), so it s
 
 ## Download
 
+### macOS — install with Homebrew (recommended)
+
+```shell
+brew tap rohith-baggam/atomiq
+brew install --cask atomiq
+```
+
+This is the smoothest way to install on a Mac: Homebrew handles the security prompt for you, so AtomIQ opens straight away. It also keeps you up to date with `brew upgrade --cask atomiq`.
+
+If you'd rather download the `.dmg` directly, see [the note below](#opening-atomiq-the-first-time) — macOS will show a warning you need to click through once.
+
+### All downloads
+
 **[Latest release →](https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest)**
 
 | Platform | Download | Size |
@@ -23,13 +36,29 @@ Nothing else to install. Everything the app needs ships inside the installer.
 
 **Not yet available:** Intel Macs, ARM Linux, and ARM Windows. On ARM Windows the x64 build runs under emulation.
 
-### After downloading
+### Opening AtomIQ the first time
 
-The app isn't signed by Apple or Microsoft yet, so your OS will warn you on first launch. This is expected:
+AtomIQ isn't yet signed with a paid Apple or Microsoft certificate, so each OS shows a one-time warning. Nothing is wrong with the download — here's how to get past it.
 
-- **macOS** — Right-click the app in Applications and choose **Open**, then **Open** again in the dialog. Double-clicking the first time will just show "unidentified developer" and refuse.
-- **Windows** — SmartScreen shows a blue warning. Click **More info**, then **Run anyway**.
-- **Linux (AppImage)** — Mark it executable first: `chmod +x AtomIQ_amd64.AppImage`, then run it.
+**macOS** (only needed for the direct `.dmg` — Homebrew handles this automatically)
+
+1. Drag AtomIQ into your **Applications** folder, then eject the disk image.
+2. Open it from Applications. macOS will say it can't verify the developer.
+3. Go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to the AtomIQ message.
+4. Confirm once. macOS remembers your choice, so this never happens again.
+
+> Older guides tell you to right-click and choose Open. **That no longer works** — Apple removed the shortcut in macOS 15 (Sequoia). Use the System Settings route above.
+>
+> Prefer the terminal? `xattr -d com.apple.quarantine /Applications/AtomIQ.app` does the same thing in one step.
+
+**Windows** — SmartScreen shows a blue warning. Click **More info**, then **Run anyway**.
+
+**Linux (AppImage)** — Make it executable first, then run it:
+
+```shell
+chmod +x AtomIQ_amd64.AppImage
+./AtomIQ_amd64.AppImage
+```
 
 ---
 
@@ -88,4 +117,4 @@ Developers and data engineers who already know what a foreign key is. AtomIQ is 
 
 This repository holds the **AtomIQ backend** — the API that runs locally inside the desktop app. The desktop shell and user interface live in the separate `atomiq-frontend` repository.
 
-Building from source is documented in [NATIVE_BUILD.md](NATIVE_BUILD.md). [downloads.json](downloads.json) is the machine-readable download manifest used by the landing page.
+Building from source is documented in [NATIVE_BUILD.md](NATIVE_BUILD.md).
