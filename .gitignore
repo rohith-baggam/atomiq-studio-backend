@@ -49,6 +49,10 @@ md/
 
 *atomic.db*
 atomic.db
+
+# Built installers - distributed via GitHub Releases, never committed
+# (AppImage exceeds GitHub's 100MB per-file push limit)
+installers/
 # Added by code-review-graph
 .code-review-graph/
 
