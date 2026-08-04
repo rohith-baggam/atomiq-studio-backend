@@ -1,0 +1,85 @@
+{
+  "product": "AtomIQ",
+  "version": "1.0.0",
+  "repo": "rohith-baggam/atomiq-studio-backend",
+  "releasePage": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest",
+  "platforms": {
+    "mac": [
+      {
+        "id": "mac-arm64-dmg",
+        "label": "macOS (Apple Silicon)",
+        "format": "dmg",
+        "arch": "arm64",
+        "recommended": true,
+        "sizeBytes": 65109411,
+        "url": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest/download/AtomIQ_aarch64.dmg",
+        "pinnedUrl": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/download/v1.0.0/AtomIQ_aarch64.dmg"
+      }
+    ],
+    "windows": [
+      {
+        "id": "win-x64-exe",
+        "label": "Windows 10/11 (64-bit)",
+        "format": "exe",
+        "arch": "x64",
+        "recommended": true,
+        "sizeBytes": 45257290,
+        "url": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest/download/AtomIQ_x64-setup.exe",
+        "pinnedUrl": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/download/v1.0.0/AtomIQ_x64-setup.exe"
+      },
+      {
+        "id": "win-x64-msi",
+        "label": "Windows 10/11 (MSI, for IT deployment)",
+        "format": "msi",
+        "arch": "x64",
+        "recommended": false,
+        "sizeBytes": 64880640,
+        "url": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest/download/AtomIQ_x64_en-US.msi",
+        "pinnedUrl": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/download/v1.0.0/AtomIQ_x64_en-US.msi"
+      }
+    ],
+    "linux": [
+      {
+        "id": "linux-x64-appimage",
+        "label": "Linux (AppImage, any distro)",
+        "format": "AppImage",
+        "arch": "x64",
+        "recommended": true,
+        "sizeBytes": 148961784,
+        "url": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest/download/AtomIQ_amd64.AppImage",
+        "pinnedUrl": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/download/v1.0.0/AtomIQ_amd64.AppImage"
+      },
+      {
+        "id": "linux-x64-deb",
+        "label": "Debian / Ubuntu (.deb)",
+        "format": "deb",
+        "arch": "x64",
+        "recommended": false,
+        "sizeBytes": 82951838,
+        "url": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest/download/AtomIQ_amd64.deb",
+        "pinnedUrl": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/download/v1.0.0/AtomIQ_amd64.deb"
+      },
+      {
+        "id": "linux-x64-rpm",
+        "label": "Fedora / RHEL (.rpm)",
+        "format": "rpm",
+        "arch": "x64",
+        "recommended": false,
+        "sizeBytes": 82943431,
+        "url": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest/download/AtomIQ_x86_64.rpm",
+        "pinnedUrl": "https://github.com/rohith-baggam/atomiq-studio-backend/releases/download/v1.0.0/AtomIQ_x86_64.rpm"
+      }
+    ]
+  },
+  "unsupported": {
+    "mac-x64": "No Intel Mac build available. Show a 'coming soon' notice, not a broken link.",
+    "linux-arm64": "No Linux ARM build available.",
+    "windows-arm64": "No native Windows ARM build; the x64 installer runs under emulation."
+  },
+  "notes": {
+    "urlVsPinnedUrl": "Use `url` for download buttons - it always resolves to the newest release and never needs updating. `pinnedUrl` is only for changelog or archive pages that must reference v1.0.0 specifically.",
+    "noFetch": "Both URLs 302-redirect to objects.githubusercontent.com, which sends no permissive CORS header. Use a plain <a href download> element; do not fetch()/XHR these URLs.",
+    "codeSigning": "Builds are not signed by Apple or Microsoft. Users will see Gatekeeper ('unidentified developer') and SmartScreen warnings - include bypass instructions on the download page.",
+    "excludedAssets": "The release also contains AtomIQ.app.tar.gz and six .sig files. These are Tauri auto-updater artifacts, not user downloads - do not render them as download options."
+  }
+}
