@@ -67,22 +67,42 @@ java.lang.UnsatisfiedLinkError: Can't load library: /var/folders/.../T/sqlite-..
   ... at org.flywaydb.core.Flyway.migrate
 ```
 
-**Cause:** `quarkus.datasource.db-kind` was set to `other` with an explicit
-`quarkus.datasource.jdbc.driver=org.sqlite.JDBC`. That combination bypasses the
-`quarkus-jdbc-sqlite` extension, so GraalVM never registers SQLite's native
-library. At runtime `sqlite-jdbc` falls back to extracting a `.dylib` into temp
-and `System.load()`-ing it, which a native image cannot do. Flyway then can't open
-a connection and startup aborts.
+**Cause: macOS hardened runtime, not the datasource config.** `sqlite-jdbc`
+extracts `libsqlitejdbc.dylib` into a temp dir and `System.load()`s it at runtime.
+Tauri signs the sidecar with hardened runtime enabled (`flags=0x10002 adhoc,runtime`),
+which turns on **library validation** — macOS then refuses to load any dylib not
+signed by the same team, including that freshly-extracted one.
 
-**Fix:** use the extension's db-kind and let it pick the driver:
+Proven by signing the *same* binary two ways:
 
-```properties
-quarkus.datasource.db-kind=sqlite
+| Signature flags | Result |
+| --- | --- |
+| `0x10002` (adhoc, **runtime**) | `UnsatisfiedLinkError`, backend exits |
+| `0x2` (adhoc, no hardened runtime) | starts in ~0.22s |
+
+**Fix:** grant the library-validation exemption via
+[`src-tauri/entitlements.plist`](../frontend/src-tauri/entitlements.plist), wired
+up in `tauri.conf.json`:
+
+```json
+"macOS": { "signingIdentity": "-", "entitlements": "entitlements.plist" }
 ```
 
-**Do not** re-add `db-kind=other` or an explicit `jdbc.driver` for the app's own
-SQLite datasource. Like Issue 1, this is invisible in `quarkus dev` — the JVM
-loads that `.dylib` fine, so it only breaks the native build.
+```xml
+<key>com.apple.security.cs.disable-library-validation</key><true/>
+```
+
+Do **not** "fix" this by turning hardened runtime off — Apple notarization
+requires it, so the entitlement is the only path that also works once the app is
+notarized.
+
+The datasource is also set to `quarkus.datasource.db-kind=sqlite` (rather than
+`other` + an explicit `org.sqlite.JDBC` driver) so the `quarkus-jdbc-sqlite`
+extension is actually engaged. That is the correct configuration, but note it did
+**not** by itself resolve this failure — the entitlement did.
+
+Like Issue 1, this is invisible in `quarkus dev`: nothing is signed there, so the
+dylib loads fine. It only appears in the signed, packaged app.
 
 ### ⚠️ Issue 1: Endpoints return 500 in native, but work in `quarkus dev`
 **Symptom:** `Jackson: No serializer found for class ... no properties discovered`
