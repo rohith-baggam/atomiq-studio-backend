@@ -10,7 +10,16 @@ the issues we already debugged so you don't debug them again.
 ### With GraalVM/Mandrel installed locally
 `JAVA_HOME`/`GRAALVM_HOME` must point to a GraalVM distribution.
 
+On this machine the default `JAVA_HOME` is Homebrew's plain OpenJDK 21, which has
+no `native-image` — the build fails with *"Cannot find the `native-image` in the
+GRAALVM_HOME, JAVA_HOME and System PATH."* GraalVM lives outside Homebrew, so
+export it first:
+
 ```bash
+export GRAALVM_HOME="$HOME/graalvm/graalvm-community-openjdk-21.0.2+13.1/Contents/Home"
+export JAVA_HOME="$GRAALVM_HOME"
+export PATH="$GRAALVM_HOME/bin:$PATH"
+
 ./mvnw package -Dnative
 ```
 
@@ -19,6 +28,9 @@ the issues we already debugged so you don't debug them again.
 ```bash
 ./mvnw package -Dnative -Dquarkus.native.container-build=true
 ```
+
+> ⚠️ A container build produces a **Linux** executable. It cannot be used as the
+> macOS sidecar — for a macOS build you need GraalVM running natively on the Mac.
 
 ### Faster iteration (skip tests)
 
@@ -43,6 +55,34 @@ Run it directly:
 ---
 
 ## 2. Known issues & fixes (DO NOT re-debug these)
+
+### ⚠️ Issue 0: Backend won't start at all in the packaged app (SQLite)
+**Symptom:** The desktop app opens but shows *"Cannot reach the AtomIQ backend. Is
+it running on :8010?"*. The `atomiq-backend` process exits immediately. Its log
+shows:
+
+```
+Failed to load native library: sqlite-<ver>-libsqlitejdbc.dylib
+java.lang.UnsatisfiedLinkError: Can't load library: /var/folders/.../T/sqlite-....dylib
+  ... at org.flywaydb.core.Flyway.migrate
+```
+
+**Cause:** `quarkus.datasource.db-kind` was set to `other` with an explicit
+`quarkus.datasource.jdbc.driver=org.sqlite.JDBC`. That combination bypasses the
+`quarkus-jdbc-sqlite` extension, so GraalVM never registers SQLite's native
+library. At runtime `sqlite-jdbc` falls back to extracting a `.dylib` into temp
+and `System.load()`-ing it, which a native image cannot do. Flyway then can't open
+a connection and startup aborts.
+
+**Fix:** use the extension's db-kind and let it pick the driver:
+
+```properties
+quarkus.datasource.db-kind=sqlite
+```
+
+**Do not** re-add `db-kind=other` or an explicit `jdbc.driver` for the app's own
+SQLite datasource. Like Issue 1, this is invisible in `quarkus dev` — the JVM
+loads that `.dylib` fine, so it only breaks the native build.
 
 ### ⚠️ Issue 1: Endpoints return 500 in native, but work in `quarkus dev`
 **Symptom:** `Jackson: No serializer found for class ... no properties discovered`
@@ -107,6 +147,7 @@ See `frontend/docs/PACKAGING.md` for the full desktop pipeline.
 
 ## 4. Pre-build checklist
 
+- [ ] Datasource still `db-kind=sqlite`, no explicit jdbc.driver? (Issue 0)
 - [ ] New DTOs/entities/enums added to `ReflectionConfig`? (Issue 1)
 - [ ] No hardcoded DB paths or ports? (Issues 2–3)
 - [ ] Flyway migrations in `src/main/resources/db/migration` compile-clean?
