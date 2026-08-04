@@ -19,7 +19,7 @@ AtomIQ is a native desktop application (built with Tauri, not Electron), so it s
 | **Debian / Ubuntu** | [AtomIQ_amd64.deb](https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest/download/AtomIQ_amd64.deb) | 79 MB |
 | **Fedora / RHEL** | [AtomIQ_x86_64.rpm](https://github.com/rohith-baggam/atomiq-studio-backend/releases/latest/download/AtomIQ_x86_64.rpm) | 79 MB |
 
-Nothing else to install — no Java runtime, no Node, no database drivers. Everything ships inside the installer.
+Nothing else to install. Everything the app needs ships inside the installer.
 
 **Not yet available:** Intel Macs, ARM Linux, and ARM Windows. On ARM Windows the x64 build runs under emulation.
 
@@ -84,39 +84,8 @@ Developers and data engineers who already know what a foreign key is. AtomIQ is 
 
 ---
 
-## For developers
+## About this repository
 
-This repository is the **AtomIQ backend**: a [Quarkus](https://quarkus.io/) REST API that ships inside the desktop app as a GraalVM native binary. The desktop shell and UI live in the separate `atomiq-frontend` repository (React 19 + TypeScript + Tauri 2).
+This repository holds the **AtomIQ backend** — the API that runs locally inside the desktop app. The desktop shell and user interface live in the separate `atomiq-frontend` repository.
 
-Run in dev mode with live coding:
-
-```shell
-./mvnw quarkus:dev
-```
-
-Dev UI is available at <http://localhost:8080/q/dev/>.
-
-Build a JVM package:
-
-```shell
-./mvnw package
-java -jar target/quarkus-app/quarkus-run.jar
-```
-
-Build the native executable that gets bundled into the installer:
-
-```shell
-./mvnw package -Dnative
-```
-
-Without GraalVM installed locally, build it in a container:
-
-```shell
-./mvnw package -Dnative -Dquarkus.native.container-build=true
-```
-
-See [NATIVE_BUILD.md](NATIVE_BUILD.md) for packaging details, and [downloads.json](downloads.json) for the machine-readable download manifest used by the landing page.
-
-> **Note:** GraalVM native image strips reflection metadata, so any new DTO must be registered in `com.shared.config.ReflectionConfig` — otherwise it works in `quarkus:dev` but fails in the packaged app.
-
-Built with Quarkus, Hibernate ORM with Panache, Flyway, SmallRye JWT, and JDBC drivers for PostgreSQL, MySQL, SQL Server, and Oracle.
+Building from source is documented in [NATIVE_BUILD.md](NATIVE_BUILD.md). [downloads.json](downloads.json) is the machine-readable download manifest used by the landing page.

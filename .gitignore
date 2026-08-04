@@ -60,3 +60,13 @@ installers/
 .claude/
 .mcp.json
 CLAUDE.md
+
+atomic.db
+application.properties
+
+# Signing keys - never commit. Patterns must match the real filenames
+# (privateKey.pem / publicKey.pem), not private.key / public.key.
+*.pem
+*.key
+private.key
+public.key
