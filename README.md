@@ -8,7 +8,7 @@ AtomIQ is a native desktop application (built with Tauri, not Electron), so it s
 
 ## Download
 
-### macOS — install with Homebrew (recommended)
+### macOS — install with Homebrew
 
 ```shell
 brew tap rohith-baggam/atomiq
@@ -16,11 +16,9 @@ brew trust rohith-baggam/atomiq
 brew install --cask atomiq
 ```
 
-This is the smoothest way to install on a Mac: Homebrew handles the security prompt for you, so AtomIQ opens straight away. It also keeps you up to date with `brew upgrade --cask atomiq`.
+Homebrew keeps AtomIQ updatable with `brew upgrade --cask atomiq` and verifies the download checksum for you. The `brew trust` line is a one-time step — Homebrew won't load casks from a third-party tap until you trust it.
 
-The `brew trust` line is a one-time step — Homebrew 6 won't load casks from a third-party tap until you explicitly trust it.
-
-If you'd rather download the `.dmg` directly, see [the note below](#opening-atomiq-the-first-time) — macOS will show a warning you need to click through once.
+**You will still see a macOS security prompt on first launch**, exactly as with the `.dmg` — Homebrew applies the same quarantine flag macOS puts on any download. See [below](#opening-atomiq-the-first-time) for the one-time approval.
 
 ### All downloads
 
@@ -43,12 +41,13 @@ Nothing else to install. Everything the app needs ships inside the installer.
 
 AtomIQ isn't yet signed with a paid Apple or Microsoft certificate, so each OS shows a one-time warning. Nothing is wrong with the download — here's how to get past it.
 
-**macOS** (only needed for the direct `.dmg` — Homebrew handles this automatically)
+**macOS** (applies to both the `.dmg` and the Homebrew install)
 
-1. Drag AtomIQ into your **Applications** folder, then eject the disk image.
-2. Open it from Applications. macOS will say it can't verify the developer.
-3. Go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to the AtomIQ message.
-4. Confirm once. macOS remembers your choice, so this never happens again.
+1. If using the `.dmg`: drag AtomIQ into **Applications**, then eject the disk image.
+2. Open AtomIQ from Applications. macOS shows **"Apple could not verify AtomIQ is free of malware"**.
+3. Click **Done**. ⚠️ Do **not** click *Move to Bin* — that deletes the app and you'll have to install it again.
+4. Go to **System Settings → Privacy & Security**, scroll to Security, and click **Open Anyway** next to the AtomIQ message.
+5. Confirm with Touch ID or your password. macOS remembers this, so it never happens again.
 
 > Older guides tell you to right-click and choose Open. **That no longer works** — Apple removed the shortcut in macOS 15 (Sequoia). Use the System Settings route above.
 >
