@@ -51,7 +51,9 @@ AtomIQ isn't yet signed with a paid Apple or Microsoft certificate, so each OS s
 
 > Older guides tell you to right-click and choose Open. **That no longer works** — Apple removed the shortcut in macOS 15 (Sequoia). Use the System Settings route above.
 >
-> Prefer the terminal? `xattr -d com.apple.quarantine /Applications/AtomIQ.app` does the same thing in one step.
+> Prefer the terminal? `/usr/bin/xattr -dr com.apple.quarantine /Applications/AtomIQ.app` does the same thing in one step.
+>
+> The `-r` is required. Without it only the app bundle is cleared, the bundled backend binary stays quarantined, and the window opens showing *"Cannot reach the AtomIQ backend"*. `/usr/bin/xattr` is spelled out because a pip-installed `xattr` can shadow Apple's and reject `-r`.
 
 **Windows** — SmartScreen shows a blue warning. Click **More info**, then **Run anyway**.
 
